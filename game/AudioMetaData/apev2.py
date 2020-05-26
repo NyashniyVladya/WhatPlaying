@@ -131,7 +131,7 @@ class APEv2(AudioTag):
             _filename, value = re.split("\x00", value, 1)
             _ext = path.splitext(_filename)[-1].lower()
             if _ext in IMAGE_MIME_EXT.itervalues():
-                return (_filename, value)
+                return (codecs.decode(_filename, "utf_8"), value)
         return None
 
     @property

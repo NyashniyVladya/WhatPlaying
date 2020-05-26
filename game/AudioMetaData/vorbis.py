@@ -290,4 +290,4 @@ class VorbisComment(AudioTag):
                 )
 
             _filename = picture_type + IMAGE_MIME_EXT.get(MIME_type, ".jpg")
-            return (_filename, imagedata)
+            return (codecs.decode(_filename, "latin_1"), imagedata)

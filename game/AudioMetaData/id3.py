@@ -736,7 +736,7 @@ class ID3V2(AudioTag):
             description, picture_data = re.split(splitter, frame_bytedata, 1)
             description = codecs.decode(description, text_encoding)
             _filename = picture_type + IMAGE_MIME_EXT.get(MIME_type, ".jpg")
-            return (_filename, picture_data)
+            return (codecs.decode(_filename, "latin_1"), picture_data)
 
         elif (frame_id[0] == 'T') or (frame_id in ("IPL", "IPLS")):
             # Text information or involved people list.

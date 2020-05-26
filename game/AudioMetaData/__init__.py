@@ -125,7 +125,7 @@ class AudioTag(object):
             if isinstance(filename, bytes):
                 _enc = (sys.getfilesystemencoding() or "utf_8")
                 filename = filename.decode(_enc, "ignore")
-            self._filename = filename
+            self._filename = filename.strip()
         else:
             self._filename = None
 
@@ -206,14 +206,19 @@ class FilenameTag(AudioTag):
         if not self._filename:
             raise NotFindHeader("Not found filename.")
 
-        self.__title = map(
+        # Delete track number, if any.
+        text = re.sub(r"^\d+\s*[^\w\s]+\s*(?=\w)", u"", self._filename)
+
+        # Getting track title from a text string of the form:
+        #     'Artist - Track title'
+        text = map(
             lambda x: re.sub(r"[\s\\/_]+", u' ', x).strip(),
-            re.split(r"[\s\\/\-_]{2,}", self._filename, 1)
+            re.split(r"[\s\\/\-_]{2,}", text, 1)
         )
-        if len(self.__title) > 1:
-            self.__artist, self.__title = self.__title
+        if len(text) > 1:
+            self.__artist, self.__title = text
         else:
-            self.__title = self.__title[0]
+            self.__title = text[0]
             self.__artist = None
 
     @property
