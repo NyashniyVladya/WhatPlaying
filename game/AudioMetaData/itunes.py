@@ -41,7 +41,7 @@ class WebTag(AudioTag):
     def _get_cover_link(self):
         variants = {}
         for key in self.__itunes_data.iterkeys():
-            result = re.search(r"(?<=artworkUrl)\d+", key)
+            result = re.search(r"(?<=artworkUrl)\d+", key, re.UNICODE)
             if result:
                 variants[key] = int(result.group())
         if not variants:

@@ -27,7 +27,7 @@ from .other_data import (
 )
 
 __author__ = "Vladya"
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 USE_WEB_DB = True
 
@@ -121,7 +121,6 @@ class AudioTag(object):
             raise WrongData("Data not found.")
 
         if filename:
-            filename = path.splitext(path.basename(path.normpath(filename)))[0]
             if isinstance(filename, bytes):
                 _enc = (sys.getfilesystemencoding() or "utf_8")
                 filename = filename.decode(_enc, "ignore")
@@ -199,6 +198,8 @@ class FilenameTag(AudioTag):
     If file does not contain any tags, trying to parse the filename.
     """
 
+    LOGGER = LOGGER.getChild("FilenameTag")
+
     def __init__(self, audio, datatype="filePath", filename=None):
 
         super(FilenameTag, self).__init__(audio, datatype, filename)
@@ -206,14 +207,23 @@ class FilenameTag(AudioTag):
         if not self._filename:
             raise NotFindHeader("Not found filename.")
 
+        text = path.splitext(
+            path.basename(path.normpath(self._filename))
+        )[0].strip()
+
         # Delete track number, if any.
-        text = re.sub(r"^\d+\s*[^\w\s]+\s*(?=\w)", u"", self._filename)
+        text = re.sub(
+            r"^\d+\s*[^\w\s]+\s*(?=\w)",
+            u"",
+            text,
+            flags=re.UNICODE
+        )
 
         # Getting track title from a text string of the form:
         #     'Artist - Track title'
         text = map(
-            lambda x: re.sub(r"[\s\\/_]+", u' ', x).strip(),
-            re.split(r"[\s\\/\-_]{2,}", text, 1)
+            lambda x: re.sub(r"[\s\\/_]+", u' ', x, flags=re.UNICODE).strip(),
+            re.split(r"[\s\\/\-_]{2,}", text, 1, re.UNICODE)
         )
         if len(text) > 1:
             self.__artist, self.__title = text

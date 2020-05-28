@@ -542,7 +542,7 @@ class ID3V2(AudioTag):
         genre = self._get_basic_tag("genre")
         if not genre:
             return None
-        _id3v1_pattern = re.compile(r"(?<!\()\(\w+\)")
+        _id3v1_pattern = re.compile(r"(?<!\()\(\w+\)", flags=re.UNICODE)
         genres = []
         for i in _id3v1_pattern.finditer(genre):
             _genre = i.group()[1:-1]

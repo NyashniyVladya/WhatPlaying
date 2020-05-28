@@ -53,6 +53,10 @@ class AudioFile(AudioTag):
                     "An error occurred while parsing {0} tag.".format(_name)
                 )
             else:
+                # After initialization, there is no need to store
+                # such large amounts of unnecessary data.
+                delattr(tag, "_bytedata")
+
                 _tags.append(tag)
 
         self._tags = tuple(_tags)
@@ -66,6 +70,8 @@ class AudioFile(AudioTag):
                 self._web = None
         else:
             self._web = None
+
+        delattr(self, "_bytedata")
 
     def __getattr__(self, key, ignore_web_tag=False):
 
