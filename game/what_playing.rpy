@@ -76,7 +76,7 @@ init -1 python in _whatPlaying:
             )
             return rend
     
-    class RenPyAudioFile(audio.AudioFile):
+    class RenPyAudioFile(audio.AudioFile, NoRollback):
     
         def __init__(self, filename):
         
@@ -166,6 +166,11 @@ init -1 python in _whatPlaying:
         
         persistent_lock = threading.Lock()
         get_metadata_lock = threading.Lock()
+        
+        MAX_SIZE = (
+            (float(config.screen_width) * PHI_CONST),
+            (float(config.screen_height) * (1. - PHI_CONST))
+        )
 
         def __init__(self, channel="music"):
             
@@ -230,18 +235,29 @@ init -1 python in _whatPlaying:
             #TODO Продумать условия "свёрнутости".
             
 
-        def _get_metadata_object(self, filename=None):
+        def _get_metadata_object(self, filename=None, not_create=False):
             """
             Возвращает объект RenPyAudioFile либо None.
+            
+            :not_create:
+                Возвращает объект, только если он уже есть в базе данных.
+                Для доступа к файлам во время сканирования.
             """
             with self.get_metadata_lock:
-                if not isinstance(filename, basestring):
-                    filename = self._get_playing()
+
                 if not filename:
-                    return None
+                    filename = self._get_playing()
+                    if not filename:
+                        return None
+
+                if not isinstance(filename, basestring):
+                    raise TypeError(__("Некорректное имя файла."))
                 if filename in self.__metadata_objects:
                     return self.__metadata_objects[filename]
-                    
+
+                if not_create:
+                    return None
+
                 try:
                     metadata_object = RenPyAudioFile(filename=filename)
                 except TagNotDefined, WrongData:
@@ -321,50 +337,47 @@ init -1 python in _whatPlaying:
         def _get_scan_block(self, is_minimized, *render_args):
             """
             Составляет блок статуса сканирования.
+            
+            (Возвращает DisplayableWrapper объект.)
             """
-            width, height, st, at = render_args
             
             text_view = self.__scanner_thread._get_text_view(
                 short_view=is_minimized
             )
 
             # Основной текст.
-            text_displayable = get_texts_disp(text_view)
-            text_surf = renpy.render(
-                text_displayable,
-                width,
-                height,
-                st,
-                at
+            text_displayable = DisplayableWrapper(
+                get_texts_disp(text_view),
+                *render_args
             )
-            text_w, text_h = map(int, text_surf.get_size())
+            if is_minimized:
+                return text_displayable.displayable
             
-            # Для сохранения "контейнерной" логики.
-            base_block = text_displayable
-            
-            if not is_minimized:
-            
-                # Отрисовываем бар статуса сканирования.
-                status_bar = get_bar_disp(
+            # Отрисовываем бар статуса сканирования.
+            status_bar = DisplayableWrapper(
+                get_bar_disp(
                     range=1.,
                     value=self.__scanner_thread.scan_status,
-                    width=text_w,
+                    width=int(text_displayable.width),
                     height=int(
                         (float(text_displayable.style.size) * PHI_CONST)
                     )
-                )
-                bar_surf = renpy.render(status_bar, width, height, st, at)
-                bar_w, bar_h = map(int, bar_surf.get_size())
-                
-                # Расстояние между баром и текстом.
-                v_spacing = int((float(bar_h) * (1. - PHI_CONST)))
-                
-                # Пририсовываем бар к основному блоку.
-                base_block = VBox(
-                    Transform(base_block, xalign=1.),
-                    Transform(status_bar, xalign=1.),
+                ),
+                *render_args
+            )
+            
+            # Расстояние между баром и текстом.
+            v_spacing = int((float(status_bar.height) * (1. - PHI_CONST)))
+            
+            # Пририсовываем бар к текстовому блоку.
+            base_block = DisplayableWrapper(
+                VBox(
+                    Transform(text_displayable.displayable, xalign=1.),
+                    Transform(status_bar.displayable, xalign=1.),
                     spacing=v_spacing
-                )
+                ),
+                *render_args
+            )
             return base_block
 
 
@@ -372,83 +385,74 @@ init -1 python in _whatPlaying:
             """
             Составляет основной блок данных:
                 Название трека, статус бар, обложку.
+            
+            (Возвращает DisplayableWrapper объект.)
             """
-            width, height, st, at = render_args
             
             text_view = metadata._get_text_view(only_title=is_minimized)
+
             # Основной текст.
-            text_displayable = get_texts_disp(text_view)
-            text_surf = renpy.render(
-                text_displayable,
-                width,
-                height,
-                st,
-                at
+            text_displayable = DisplayableWrapper(
+                get_texts_disp(text_view),
+                *render_args
             )
-            text_w, text_h = map(int, text_surf.get_size())
-            
+
             # Подгоняем размер обложки альбома под высоту текста.
-            metadata.cover_album.square_area_len = text_h
-            cover_surf = renpy.render(
-                metadata.cover_album,
-                width,
-                height,
-                st,
-                at
-            )
-            cover_w, cover_h = map(int, cover_surf.get_size())
-            
+            metadata.cover_album.square_area_len = text_displayable.height
+            cover = DisplayableWrapper(metadata.cover_album, *render_args)
+
             # Расстояние между текстом и обложкой.
-            h_spacing = int((float(cover_w) * (1. - PHI_CONST)))
-            
+            h_spacing = int((float(cover.width) * (1. - PHI_CONST)))
+
             # Горизонтальный контейнер с текстом и обложкой.
-            base_block = HBox(
-                text_displayable,
-                Transform(metadata.cover_album, yalign=.5),
-                spacing=h_spacing
+            base_block = DisplayableWrapper(
+                HBox(
+                    text_displayable.displayable,
+                    Transform(cover.displayable, yalign=.5),
+                    spacing=h_spacing
+                ),
+                *render_args
             )
-            block_surf = renpy.render(
-                base_block,
-                width,
-                height,
-                st,
-                at
-            )
-            block_w, block_h = map(int, block_surf.get_size())
-            
-            if not is_minimized:
-                # Если не свёрнуто, пытаемся отрисовать статус-бар.
-                position = self._get_position()
-                if isinstance(position, float):
-                    # Если известна позиция трека - отрисовываем статус-бар.
-                    status_bar = get_bar_disp(
+            if is_minimized:
+                return base_block
+
+            position = self._get_position()
+            # Если известна позиция трека - отрисовываем статус-бар.
+            if isinstance(position, float):
+
+                status_bar = DisplayableWrapper(
+                    get_bar_disp(
                         range=1.,
                         value=position,
-                        width=block_w,
+                        width=int(base_block.width),
                         height=int(
                             (float(text_displayable.style.size) * PHI_CONST)
                         )
-                    )
-                    bar_surf = renpy.render(status_bar, width, height, st, at)
-                    bar_w, bar_h = map(int, bar_surf.get_size())
-                    
-                    # Расстояние между статус-баром и контейнером.
-                    v_spacing = int((float(bar_h) * (1. - PHI_CONST)))
-                    
-                    # Дорисовываем бар к основному изображению.
-                    base_block = VBox(
-                        Transform(base_block, xalign=1.),
-                        Transform(status_bar, xalign=1.),
+                    ),
+                    *render_args
+                )
+
+                # Расстояние между статус-баром и контейнером.
+                v_spacing = int((float(status_bar.height) * (1. - PHI_CONST)))
+                
+                # Дорисовываем бар к основному изображению.
+                base_block = DisplayableWrapper(
+                    VBox(
+                        Transform(base_block.displayable, xalign=1.),
+                        Transform(status_bar.displayable, xalign=1.),
                         spacing=v_spacing
-                    )
+                    ),
+                    *render_args
+                )
             
             return base_block
 
 
         def render(self, width, height, st, at):
-            
+
+            render_args = (width, height, st, at)
             is_minimized = self.is_minimized()
-            
+
             if self.__scanner_thread.scan_completed:
                 # Сканирование завершено.
                 if DEBUG and self.__scanner_thread.exception:
@@ -459,87 +463,88 @@ init -1 python in _whatPlaying:
                 # Основной блок. Текстовые данные.
                 if metadata:
                     # Музыка играет. Данные доступны.
-                    general_displayable = self._get_base_block(
+                    general_block = self._get_base_block(
                         metadata,
                         is_minimized,
-                        width,
-                        height,
-                        st,
-                        at
+                        *render_args
                     )
                 else:
                     # Тишина в эфире.
-                    general_displayable = get_texts_disp(
-                        __("Тишина в эфире.")
+                    general_block = DisplayableWrapper(
+                        get_texts_disp(__("Тишина в эфире.")),
+                        *render_args
                     )
+                    
             else:
                 # Идёт сканирование. Выводим информацию.
-                general_displayable = self._get_scan_block(
+                general_block = self._get_scan_block(
                     is_minimized,
-                    width,
-                    height,
-                    st,
-                    at
+                    *render_args
                 )
 
             if not is_minimized:
                 # Если не "свёрнуто" - дорисовываем бар непрозрачности.
-                general_surf = renpy.render(
-                    general_displayable,
-                    width,
-                    height,
-                    st,
-                    at
-                )
-                general_w, general_h = map(int, general_surf.get_size())
-                # Бар непрозрачности.
-                alpha_bar = get_bar_disp(
-                    value=FieldValue(
-                        object=self,
-                        field="alpha",
-                        range=1.,
-                        step=.01
+                alpha_bar = DisplayableWrapper(
+                    get_bar_disp(
+                        value=FieldValue(
+                            object=self,
+                            field="alpha",
+                            range=1.,
+                            step=.01
+                        ),
+                        vertical=True,
+                        height=int(general_block.height)
                     ),
-                    vertical=True,
-                    height=general_h
+                    *render_args
                 )
-                alpha_bar_surf = renpy.render(alpha_bar, width, height, st, at)
-                bar_w, bar_h = map(int, alpha_bar_surf.get_size())
-                
+
                 # Расстояние между баром и основным блоком
-                h_spacing = int((float(bar_w) * (1. - PHI_CONST)))
-                
+                h_spacing = int((float(alpha_bar.width) * (1. - PHI_CONST)))
+
                 # Дорисовываем бар к блоку.
-                general_displayable = HBox(
-                    Transform(general_displayable, yalign=.0),
-                    Transform(alpha_bar, yalign=.0),
-                    spacing=h_spacing
+                general_block = DisplayableWrapper(
+                    HBox(
+                        Transform(general_block.displayable, yalign=.0),
+                        Transform(alpha_bar.displayable, yalign=.0),
+                        spacing=h_spacing
+                    ),
+                    *render_args
                 )
                 
                 
-            # Завершающая часть. Рендерим конечный блок.
+            # Завершающая часть. Подгоняем готовую картинку.
             if not self.__is_hovered:
                 # Если наведения нет - меняем состояние альфа-канала.
-                general_displayable = Transform(
-                    general_displayable,
-                    alpha=self.alpha
+                general_block = DisplayableWrapper(
+                    Transform(general_block.displayable, alpha=self.alpha),
+                    *render_args
                 )
-            self.__general_displayable = general_displayable
-            general_surf = renpy.render(
-                general_displayable,
-                width,
-                height,
-                st,
-                at
+
+            max_w, max_h = self.MAX_SIZE
+            coefficient = min(
+                (max_w / float(general_block.width)),
+                (max_h / float(general_block.height))
             )
-            rend = renpy.Render(*map(int, general_surf.get_size()))
-            rend.blit(general_surf, (0, 0))
-               
-            rend_w, rend_h = self.__size = tuple(map(int, rend.get_size()))
+            if coefficient < 1.:
+                # Если картинка слишком большая - поджимаем.
+                general_block = DisplayableWrapper(
+                    Transform(general_block.displayable, zoom=coefficient),
+                    *render_args
+                )
+
+            # Финальный рендер.
+            self.__general_displayable = general_block.displayable
+            render_w, render_h = self.__size = tuple(
+                map(int, (general_block.width, general_block.height))
+            )
+            render_object = renpy.Render(render_w, render_h)
+            render_object.blit(general_block.surface, (0, 0))
+
             if self.__is_hovered:
-                rend.add_focus(self, x=0, y=0, w=rend_w, h=rend_h)
+                render_object.add_focus(self, x=0, y=0, w=render_w, h=render_h)
+
             renpy.redraw(self, .0)
-            return rend
+            return render_object
             
      
             
@@ -550,16 +555,4 @@ init -1 python in _whatPlaying:
         layer="master"
     )
     config.overlay_screens.append(MetaDataViewer.__name__)
-
-
-
-
-
-    #TODO Заделать блок с доп. информацией.
-    #     Нашпиговать всяких приблуд, вроде работы с БО и т.п.
-    
-
-
-
-
 

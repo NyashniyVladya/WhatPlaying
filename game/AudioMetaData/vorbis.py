@@ -105,6 +105,8 @@ class VorbisComment(AudioTag):
             raise IncorrectTag("Not found vorbis comments.")
 
     def __getattr__(self, key):
+        if key.startswith("__") and key.endswith("__"):
+            raise AttributeError(key)
         if ("_comments" in self.__dict__) and (key.upper() in self._comments):
             return self._comments[key.upper()]
         raise AttributeError(key)

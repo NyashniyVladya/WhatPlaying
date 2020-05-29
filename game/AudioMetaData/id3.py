@@ -464,6 +464,9 @@ class ID3V2(AudioTag):
 
     def __getattr__(self, key):
 
+        if key.startswith("__") and key.endswith("__"):
+            raise AttributeError(key)
+
         if ("_FLAGS_BYTE" in self.__dict__) and (key in self.FLAGS_INFO):
             ver = self.VERSION[1]
             return bool((self._FLAGS_BYTE & self.FLAGS_INFO[key][ver]))

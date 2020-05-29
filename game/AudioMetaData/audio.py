@@ -5,6 +5,7 @@ Combining tag parsers in a single class.
 @author: Vladya
 """
 
+import threading
 from . import (
     id3,
     vorbis,
@@ -45,12 +46,13 @@ class AudioFile(AudioTag):
                     filename=self._filename
                 )
             except NotFindHeader:
-                self.LOGGER.debug("Tag {0} is not detected.".format(_name))
+                self.LOGGER.debug("Tag %s is not detected.", _name)
             except IncorrectTag:
-                self.LOGGER.debug("Tag {0} incorrect.".format(_name))
+                self.LOGGER.debug("Tag %s is incorrect.", _name)
             except Exception:
                 self.LOGGER.exception(
-                    "An error occurred while parsing {0} tag.".format(_name)
+                    "An error occurred while parsing %s tag.",
+                    _name
                 )
             else:
                 # After initialization, there is no need to store
@@ -71,14 +73,21 @@ class AudioFile(AudioTag):
         else:
             self._web = None
 
+        self.__webtag_lock = threading.Lock()
+
         delattr(self, "_bytedata")
 
     def __getattr__(self, key, ignore_web_tag=False):
 
+        if key.startswith("__") and key.endswith("__"):
+            raise AttributeError(key)
+
         if not ignore_web_tag:
-            if ("_web" in self.__dict__) and self._web and self._web.web_tag:
-                if self._web.web_tag not in self._tags:
-                    self._tags = (self._web.web_tag,) + self._tags
+            with self.__webtag_lock:
+                if "_web" in self.__dict__:
+                    if self._web and self._web.web_tag:
+                        if self._web.web_tag not in self._tags:
+                            self._tags = (self._web.web_tag,) + self._tags
 
         for tag in self._tags:
             if ignore_web_tag and isinstance(tag, itunes.WebTag):
