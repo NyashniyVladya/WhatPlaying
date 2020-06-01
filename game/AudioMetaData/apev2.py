@@ -91,7 +91,7 @@ class APEv2(AudioTag):
     def _get_items(self):
 
         with io.BytesIO(self._tag_raw_data) as tagFile:
-            for _i in xrange(self._item_count):
+            for _ in xrange(self._item_count):
                 size, flags = struct.unpack("<2I", tagFile.read(8))
                 item_key = ""
                 while True:

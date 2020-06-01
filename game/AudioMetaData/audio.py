@@ -117,6 +117,11 @@ class AudioFile(AudioTag):
 
     @property
     def coveralbum_tag(self):
+        # Image resolutions in ITunes are very small.
+        # We use it only if there are no other options.
+        result = self._get_basic_tag("coveralbum_tag", ignore_web_tag=True)
+        if result:
+            return result
         return self._get_basic_tag("coveralbum_tag")
 
     @property

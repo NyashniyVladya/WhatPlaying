@@ -38,7 +38,18 @@ init -1 python in _whatPlaying:
                     )
             self.__image = image
             self.__square_area_len = None
-            
+
+        def __eq__(self, other):
+            if type(other) is not type(self):
+                return False
+            if self._image != other._image:
+                return False
+            return True
+
+        @property
+        def _image(self):
+            return self.__image
+
         @property
         def square_area_len(self):
             """
@@ -78,7 +89,7 @@ init -1 python in _whatPlaying:
     
     class RenPyAudioFile(audio.AudioFile, NoRollback):
     
-        def __init__(self, filename):
+        def __init__(self, filename, viewer_object):
         
             """
             Обёртка над основным классом, для работы в ренпае.
@@ -103,6 +114,7 @@ init -1 python in _whatPlaying:
                         filename=filename
                     )
                     
+            self.__viewer_object = viewer_object
             self.__cover_album = _AlbumCover(metadata_object=self)
             
         def __nonzero__(self):
@@ -112,21 +124,22 @@ init -1 python in _whatPlaying:
         def cover_album(self):
             return self.__cover_album
             
-        def _get_text_view(self, only_title=False):
+        def _get_info_displayables(self, only_title=False):
             
             """
-            Возвращает текст в том виде, в котором он будет показан на экране
-            либо None.
+            Возвращает кортеж Displayable с информацией о песне или None.
+            (Для размещения в вертикальном контейнере)
             
             :only_title:
-                Вернуть только название.
+                Вернуть только Displayable названия.
             
-            Без флага 'only_title' текст будет иметь вид:
-            
-                         Артист - Название
-                                    Альбом
-                                07.11.1917
-                                      Жанр
+            Без флага 'only_title' кортеж будет иметь вид:
+                (
+                    "Артист - Название",
+                               "Альбом",
+                           "07.11.1917",
+                                 "Жанр"
+                )
 
             """
             artist = title = album = date = genre = None
@@ -142,46 +155,69 @@ init -1 python in _whatPlaying:
                 genre = "{{i}}{0}{{/i}}".format(quote_text(self.genre_tag))
             
             if only_title:
-                return title
-
-            text_view = '\n'.join(
-                filter(
-                    bool,
-                    (
-                        " - ".join(filter(bool, (artist, title))),
-                        album,
-                        date,
-                        genre
-                    )
-                )
-            )
-            if not text_view:
+                if title:
+                    return (self.__viewer_object.disp_getter.Text(title),)
                 return None
-            return text_view
+                
+            result = []
+            artist_title_text_data = " - ".join(filter(bool, (artist, title)))
+            for show_text, source_text in zip(
+                (artist_title_text_data, album, date, genre),
+                (
+                    ' '.join(filter(bool, (self.artist_tag, self.title_tag))),
+                    self.album_tag,
+                    self.date_tag,
+                    self.genre_tag
+                )
+                
+            ):
+                if source_text:
+                    _tb = self.__viewer_object.disp_getter.TextButton(
+                        show_text,
+                        clicked=Function(
+                            self.__viewer_object.extra._copy_to_clipboard,
+                            source_text
+                        ),
+                        alternate=Function(
+                            self.__viewer_object.extra._search_on_youtube,
+                            source_text
+                        )
+                    )
+                    result.append(_tb)
+            if not result:
+                return None
+            return tuple(result)
 
 
     class MetaDataViewer(renpy.Displayable, NoRollback):
     
         __author__ = "Vladya"
         
-        persistent_lock = threading.Lock()
-        get_metadata_lock = threading.Lock()
         
         MAX_SIZE = (
             (float(config.screen_width) * PHI_CONST),
-            (float(config.screen_height) * (1. - PHI_CONST))
+            (float(config.screen_height) * PHI_CONST)
         )
 
-        def __init__(self, channel="music"):
+        def __init__(self):
             
             super(MetaDataViewer, self).__init__()
-            self.__channel = get_channel(channel)
+            
+            self.__preferences = Preferences(pref_id=self.__class__.__name__)
+            
+            self.__disp_getter = DispGetter(preferences=self.preferences)
+            
+            self.__channel = get_channel(self.preferences.channel_name)
+            self.__channel_lock = threading.Lock()
+            
             self.__metadata_objects = {}
+            self._metadata_lock = threading.Lock()
             
             self.__size = None
             self.__is_hovered = None
             
             self.__general_displayable = None
+            self.__extra = ExtraFunctional(viewer_object=self)
             
             self.__scanner_thread = MusicScanner(viewer_object=self)
             self.__scanner_thread.start()
@@ -191,48 +227,54 @@ init -1 python in _whatPlaying:
             """
             Для вызова в качестве скрина.
             """
-            ui.add(Transform(self, anchor=(1., .0), pos=(.99, .01)))
+            xanchor, yanchor = self.preferences._alignment_to_tuple(
+                self.preferences.alignment
+            )
+            xpos, ypos = map(lambda a: ((a * .98) + .01), (xanchor, yanchor))
+            ui.add(
+                Transform(self, anchor=(xanchor, yanchor), pos=(xpos, ypos))
+            )
+            
+        @property
+        def preferences(self):
+            """
+            Объект 'Preferences'. Различные настройки.
+            """
+            return self.__preferences
+            
+        @property
+        def disp_getter(self):
+            """
+            Объект 'DispGetter'. Для составления Displayable.
+            """
+            return self.__disp_getter
+            
+        @property
+        def extra(self):
+            """
+            Объект доп. функционала.
+            """
+            return self.__extra
+            
             
         @property
         def channel(self):
-            return self.__channel
-            
-        @channel.setter
-        def channel(self, new_channel):
-            new_channel = get_channel(new_channel)
-            self.__channel = new_channel
-        
-        
-        @property
-        def alpha(self):
-            """
-            Прозрачность окна в "несвёрнутом" режиме.
-            Инкапсуляция работы с 'persistent' переменной.
-            """
-            with self.persistent_lock:
-                if not isinstance(persistent._what_playing_alpha, float):
-                    persistent._what_playing_alpha = 1.
-                elif persistent._what_playing_alpha > 1.:
-                    persistent._what_playing_alpha = 1.
-                elif persistent._what_playing_alpha < .0:
-                    persistent._what_playing_alpha = .0
-                return persistent._what_playing_alpha
+            with self.__channel_lock:
+                if self.__channel.name != self.preferences.channel_name:
+                    self.__channel = get_channel(self.preferences.channel_name)
+                return self.__channel
                 
-        @alpha.setter
-        def alpha(self, new_alpha):
-            if not isinstance(new_alpha, (int, float)):
-                raise TypeError(__("Неверный тип 'alpha'."))
-            new_alpha = max(min(float(new_alpha), 1.), .0)
-            with self.persistent_lock:
-                if new_alpha != persistent._what_playing_alpha:
-                    persistent._what_playing_alpha = new_alpha
+        @property
+        def scanner_thread(self):
+            return self.__scanner_thread
 
         def is_minimized(self):
             """
             Находится ли модуль в "свёрнутом" режиме.
             """
+            # Пока что целиком зависит от 'self.__is_hovered'.
+            # Может добавлю ещё условий: настройка юзера, например.
             return (not self.__is_hovered)
-            #TODO Продумать условия "свёрнутости".
             
 
         def _get_metadata_object(self, filename=None, not_create=False):
@@ -243,7 +285,7 @@ init -1 python in _whatPlaying:
                 Возвращает объект, только если он уже есть в базе данных.
                 Для доступа к файлам во время сканирования.
             """
-            with self.get_metadata_lock:
+            with self._metadata_lock:
 
                 if not filename:
                     filename = self._get_playing()
@@ -259,7 +301,10 @@ init -1 python in _whatPlaying:
                     return None
 
                 try:
-                    metadata_object = RenPyAudioFile(filename=filename)
+                    metadata_object = RenPyAudioFile(
+                        filename=filename,
+                        viewer_object=self
+                    )
                 except TagNotDefined, WrongData:
                     # Тегов не обнаружено.
                     self.__metadata_objects[filename] = None
@@ -333,6 +378,8 @@ init -1 python in _whatPlaying:
                     if self.__general_displayable:
                         self.__general_displayable.event(ev, x, y, st)
                     raise renpy.IgnoreEvent()
+                else:
+                    self.__extra._clean_status_messages()
 
         def _get_scan_block(self, is_minimized, *render_args):
             """
@@ -341,23 +388,24 @@ init -1 python in _whatPlaying:
             (Возвращает DisplayableWrapper объект.)
             """
             
-            text_view = self.__scanner_thread._get_text_view(
+            text_view = self.scanner_thread._get_text_view(
                 short_view=is_minimized
             )
 
             # Основной текст.
             text_displayable = DisplayableWrapper(
-                get_texts_disp(text_view),
+                self.disp_getter.Text(text_view),
                 *render_args
             )
             if is_minimized:
-                return text_displayable.displayable
+                return text_displayable
             
             # Отрисовываем бар статуса сканирования.
             status_bar = DisplayableWrapper(
-                get_bar_disp(
-                    range=1.,
-                    value=self.__scanner_thread.scan_status,
+                self.disp_getter.HBar(
+                    value=_ScanThreadStatusValue(
+                        scanner_thread_object=self.scanner_thread
+                    ),
                     width=int(text_displayable.width),
                     height=int(
                         (float(text_displayable.style.size) * PHI_CONST)
@@ -366,16 +414,9 @@ init -1 python in _whatPlaying:
                 *render_args
             )
             
-            # Расстояние между баром и текстом.
-            v_spacing = int((float(status_bar.height) * (1. - PHI_CONST)))
-            
             # Пририсовываем бар к текстовому блоку.
             base_block = DisplayableWrapper(
-                VBox(
-                    Transform(text_displayable.displayable, xalign=1.),
-                    Transform(status_bar.displayable, xalign=1.),
-                    spacing=v_spacing
-                ),
+                self.disp_getter.VBox(text_displayable, status_bar),
                 *render_args
             )
             return base_block
@@ -389,28 +430,38 @@ init -1 python in _whatPlaying:
             (Возвращает DisplayableWrapper объект.)
             """
             
-            text_view = metadata._get_text_view(only_title=is_minimized)
-
-            # Основной текст.
-            text_displayable = DisplayableWrapper(
-                get_texts_disp(text_view),
-                *render_args
+            song_info_tuple = metadata._get_info_displayables(
+                only_title=is_minimized
             )
+            if song_info_tuple:
+                song_info_tuple = tuple(
+                    map(
+                        lambda d: DisplayableWrapper(d, *render_args),
+                        song_info_tuple
+                    )
+                )
+                if len(song_info_tuple) == 1:
+                    text_block = song_info_tuple[0]
+                else:
+                    text_block = DisplayableWrapper(
+                        self.disp_getter.VBox(*song_info_tuple, spacing=0),
+                        *render_args
+                    )
+                    
+            else:
+                # Данные получить не удалось.
+                text_block = DisplayableWrapper(
+                    self.disp_getter.Text(__("Метаданных не обнаружено.")),
+                    *render_args
+                )
 
             # Подгоняем размер обложки альбома под высоту текста.
-            metadata.cover_album.square_area_len = text_displayable.height
+            metadata.cover_album.square_area_len = text_block.height
             cover = DisplayableWrapper(metadata.cover_album, *render_args)
-
-            # Расстояние между текстом и обложкой.
-            h_spacing = int((float(cover.width) * (1. - PHI_CONST)))
 
             # Горизонтальный контейнер с текстом и обложкой.
             base_block = DisplayableWrapper(
-                HBox(
-                    text_displayable.displayable,
-                    Transform(cover.displayable, yalign=.5),
-                    spacing=h_spacing
-                ),
+                self.disp_getter.HBox(text_block, (cover, {"yalign": .5})),
                 *render_args
             )
             if is_minimized:
@@ -421,43 +472,31 @@ init -1 python in _whatPlaying:
             if isinstance(position, float):
 
                 status_bar = DisplayableWrapper(
-                    get_bar_disp(
-                        range=1.,
-                        value=position,
-                        width=int(base_block.width),
-                        height=int(
-                            (float(text_displayable.style.size) * PHI_CONST)
-                        )
+                    self.disp_getter.HBar(
+                        value=_AudioPositionValue(viewer_object=self),
+                        width=int(base_block.width)
                     ),
                     *render_args
                 )
 
-                # Расстояние между статус-баром и контейнером.
-                v_spacing = int((float(status_bar.height) * (1. - PHI_CONST)))
-                
                 # Дорисовываем бар к основному изображению.
                 base_block = DisplayableWrapper(
-                    VBox(
-                        Transform(base_block.displayable, xalign=1.),
-                        Transform(status_bar.displayable, xalign=1.),
-                        spacing=v_spacing
-                    ),
+                    self.disp_getter.VBox(base_block, status_bar),
                     *render_args
                 )
             
             return base_block
-
 
         def render(self, width, height, st, at):
 
             render_args = (width, height, st, at)
             is_minimized = self.is_minimized()
 
-            if self.__scanner_thread.scan_completed:
+            if self.scanner_thread.scan_completed:
                 # Сканирование завершено.
-                if DEBUG and self.__scanner_thread.exception:
+                if DEBUG and self.scanner_thread.exception:
                     # Во время сканирования произошла ошибка.
-                    raise self.__scanner_thread.exception
+                    raise self.scanner_thread.exception
 
                 metadata = self._get_metadata_object()
                 # Основной блок. Текстовые данные.
@@ -471,7 +510,7 @@ init -1 python in _whatPlaying:
                 else:
                     # Тишина в эфире.
                     general_block = DisplayableWrapper(
-                        get_texts_disp(__("Тишина в эфире.")),
+                        self.disp_getter.Text(__("Тишина в эфире.")),
                         *render_args
                     )
                     
@@ -481,33 +520,34 @@ init -1 python in _whatPlaying:
                     is_minimized,
                     *render_args
                 )
-
+            
             if not is_minimized:
-                # Если не "свёрнуто" - дорисовываем бар непрозрачности.
+                # Если не свёрнуто - рисуем экстра блок и альфа-бар.
+                
+                # Рисуем экстра-блок.
+                extra_block = self.__extra.get_extra_block(*render_args)
+                general_block = DisplayableWrapper(
+                    self.disp_getter.VBox(general_block, extra_block),
+                    *render_args
+                )
+
+                # Рисуем альфа-бар.
                 alpha_bar = DisplayableWrapper(
-                    get_bar_disp(
+                    self.disp_getter.VBar(
                         value=FieldValue(
-                            object=self,
+                            object=self.preferences,
                             field="alpha",
                             range=1.,
                             step=.01
                         ),
-                        vertical=True,
                         height=int(general_block.height)
                     ),
                     *render_args
                 )
 
-                # Расстояние между баром и основным блоком
-                h_spacing = int((float(alpha_bar.width) * (1. - PHI_CONST)))
-
                 # Дорисовываем бар к блоку.
                 general_block = DisplayableWrapper(
-                    HBox(
-                        Transform(general_block.displayable, yalign=.0),
-                        Transform(alpha_bar.displayable, yalign=.0),
-                        spacing=h_spacing
-                    ),
+                    self.disp_getter.HBox(general_block, alpha_bar),
                     *render_args
                 )
                 
@@ -516,26 +556,32 @@ init -1 python in _whatPlaying:
             if not self.__is_hovered:
                 # Если наведения нет - меняем состояние альфа-канала.
                 general_block = DisplayableWrapper(
-                    Transform(general_block.displayable, alpha=self.alpha),
+                    self.disp_getter.Transform(
+                        general_block.displayable,
+                        alpha=self.preferences.alpha
+                    ),
                     *render_args
                 )
 
             max_w, max_h = self.MAX_SIZE
             coefficient = min(
-                (max_w / float(general_block.width)),
-                (max_h / float(general_block.height))
+                (max_w / general_block.width),
+                (max_h / general_block.height)
             )
             if coefficient < 1.:
                 # Если картинка слишком большая - поджимаем.
                 general_block = DisplayableWrapper(
-                    Transform(general_block.displayable, zoom=coefficient),
+                    self.disp_getter.Transform(
+                        general_block.displayable,
+                        zoom=coefficient
+                    ),
                     *render_args
                 )
 
             # Финальный рендер.
             self.__general_displayable = general_block.displayable
             render_w, render_h = self.__size = tuple(
-                map(int, (general_block.width, general_block.height))
+                map(int, general_block.size)
             )
             render_object = renpy.Render(render_w, render_h)
             render_object.blit(general_block.surface, (0, 0))
@@ -555,4 +601,3 @@ init -1 python in _whatPlaying:
         layer="master"
     )
     config.overlay_screens.append(MetaDataViewer.__name__)
-

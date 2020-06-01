@@ -1,16 +1,23 @@
 
-init -3 python in _whatPlaying:
+init -5 python in _whatPlaying:
 
     """
-    Импорты, всякие флаги, доп. функции. Чтобы не загромождать основной файл.
+    Импорты, всякие флаги, доп. функции.
     """
-
+    
+    import __builtin__
     import io
+    import re
     import random
     import zipfile
     import threading
+    import pygame_sdl2 as pygame
     from os import path
     from renpy.audio.audio import get_channel
+    from collections import (
+        OrderedDict,
+        namedtuple
+    )
     from AudioMetaData import (
         audio,
         TagNotDefined,
@@ -22,10 +29,15 @@ init -3 python in _whatPlaying:
         persistent,
         NoRollback,
         Transform,
-        Text,
         HBox,
         VBox,
-        FieldValue
+        Button,
+        Text,
+        FieldValue,
+        Function,
+        Color,
+        BarValue,
+        FieldEquality
     )
     try:
         from store import AudioData
@@ -74,48 +86,19 @@ init -3 python in _whatPlaying:
         for old, new in {'[': "[[", '{': "{{"}.iteritems():
             text = text.replace(old, new)
         return text
-        
-    def get_texts_disp(string_data, **text_kwargs):
-        """
-        Возвращает объект текста.
-        (Для синхронизации стилей.)
-        """
-        if not isinstance(string_data, basestring):
-            try:
-                string_data = unicode(string_data)
-            except Exception:
-                raise TypeError(__("Передан не текст."))
 
-        default_kwargs = {
-            "size": recalculate_to_screen_size(35),
-            "layout": "nobreak",
-            "text_align": 1.
-        }
-        default_kwargs.update(text_kwargs)
-        return Text(string_data, **default_kwargs)
-        
-    def get_bar_disp(**bar_kwargs):
+    def unpack_multiline_string(string):
         """
-        Возвращает объект бара.
-        (Всё для той же цели. Синхронизация стилей.)
-        """
-        default_kwargs = {}
-        if bar_kwargs.get("vertical", False):
-            # Вертикальный бар.
-            default_kwargs["width"] = recalculate_to_screen_size(22)
-        else:
-            # Горизонтальный.
-            default_kwargs["height"] = recalculate_to_screen_size(22, False)
-        default_kwargs.update(bar_kwargs)
-        
-        # Если переданы конкретные размеры - они должны быть неизменны.
-        if "width" in default_kwargs:
-            default_kwargs["xminimum"] = default_kwargs["width"]
-            default_kwargs["xmaximum"] = default_kwargs["width"]
-            
-        if "height" in default_kwargs:
-            default_kwargs["yminimum"] = default_kwargs["height"]
-            default_kwargs["ymaximum"] = default_kwargs["height"]
+        Удаляет избыточные пробелы и переносы в мультистроках
+        (это которые вот как этот комментарий).
 
-        return renpy.display.behavior.Bar(**default_kwargs)
+        Для сохранения переноса добавлять в строку '{N}'.
+        Сей символ будет заменён на перенос строки.
+        """
+        if not isinstance(string, basestring):
+            raise TypeError(__("Передан не текст."))
+        
+        string = re.sub(r"\s+", ' ', string, flags=re.UNICODE)
+        string = re.sub(r"\s*\{N\}\s*", '\n', string, flags=re.UNICODE)
+        return string.strip()
 

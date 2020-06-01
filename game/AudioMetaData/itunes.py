@@ -177,6 +177,8 @@ class ITunesWebParser(object):
             _tit = self._audio._get_basic_tag("title_tag", ignore_web_tag=True)
             _alb = self._audio._get_basic_tag("album_tag", ignore_web_tag=True)
             for variant in map(WebTag, variants):
+                if variant.kind != "song":
+                    continue
                 if _tit.lower() == variant.title_tag.lower():
                     if _alb and (_alb.lower() != variant.album_tag.lower()):
                         continue
@@ -269,7 +271,7 @@ class ITunesWebParser(object):
             "term": term,
             "country": "RU",
             "media": "music",
-            "entity": "song",
+            "entity": "musicTrack",
             "attribute": "mixTerm",
             "limit": 200
         }
