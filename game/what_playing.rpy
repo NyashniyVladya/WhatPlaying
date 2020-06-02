@@ -20,24 +20,25 @@ init -1 python in _whatPlaying:
         placeholders_archive = path.abspath(
             renpy.loader.transfn("albumCoverPlaceholders.zip")
         )
-        
+
         def __init__(self, metadata_object):
             
             super(_AlbumCover, self).__init__()
-        
+            
             if metadata_object.coveralbum_tag:
                 fn, picture_bytedata = metadata_object.coveralbum_tag
                 fn = "{0} {1}".format(metadata_object.__unicode__(), fn)
                 image = im.Data(data=picture_bytedata, filename=fn)
-            
             else:
                 with zipfile.ZipFile(self.placeholders_archive, 'r') as _zip:
                     image = im.ZipFileImage(
                         self.placeholders_archive,
                         random.choice(_zip.namelist())
                     )
+
             self.__image = image
             self.__square_area_len = None
+
 
         def __eq__(self, other):
             if type(other) is not type(self):
@@ -63,15 +64,15 @@ init -1 python in _whatPlaying:
                 raise ValueError(__("Неверное значение длины."))
             self.__square_area_len = float(new_len)
             renpy.redraw(self, .0)
-            
+
         def render(self, width, height, st, at):
-            
+        
             if not self.square_area_len:
                 # Ждём установки размера.
                 renpy.redraw(self, .0)
                 return renpy.Render(1, 1)
-
-            surf = im.cache.get(self.__image)
+            
+            surf = im.cache.get(self._image)
             old_w, old_h = map(float, surf.get_size())
             zoom_w, zoom_h = map(
                 lambda x: (self.square_area_len / x),
@@ -179,7 +180,7 @@ init -1 python in _whatPlaying:
                             source_text
                         ),
                         alternate=Function(
-                            self.__viewer_object.extra._search_on_youtube,
+                            self.__viewer_object.extra._search_on_web,
                             source_text
                         )
                     )
@@ -592,7 +593,7 @@ init -1 python in _whatPlaying:
             renpy.redraw(self, .0)
             return render_object
             
-     
+        
             
             
     renpy.display.screen.define_screen(

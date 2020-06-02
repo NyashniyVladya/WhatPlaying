@@ -17,7 +17,8 @@ init -2 python in _whatPlaying:
         DEFAULT_VALUES = {
             "channel_name": "music",
             "alpha": 1.,
-            "alignment": "tr"
+            "alignment": "tr",
+            "search_engine": "YouTube"
         }
         
         alignment_pattern = re.compile(
@@ -87,7 +88,37 @@ init -2 python in _whatPlaying:
                 if new_alpha != getattr(persistent, name):
                     setattr(persistent, name, new_alpha)
 
-        
+        @property
+        def search_engine(self):
+            """
+            Поисковый сервис, используемый для... Ну... Для поиска!
+            """
+            
+            name = self._get_persistent_name("search_engine")
+            with self.__locks["search_engine"]:
+                return getattr(persistent, name)
+                
+        @search_engine.setter
+        def search_engine(self, new_search_engine):
+            if isinstance(new_search_engine, SearchBase):
+                new_search_engine = new_search_engine.NAME
+            if not isinstance(new_search_engine, basestring):
+                raise TypeError(__("Неверный тип 'search_engine'."))
+            new_search_engine = new_search_engine.lower()
+            for sc in ExtraFunctional.search_classes:
+                if new_search_engine in (sc.__name__.lower(), sc.NAME.lower()):
+                    name = self._get_persistent_name("search_engine")
+                    with self.__locks["search_engine"]:
+                        if getattr(persistent, name) != sc.NAME:
+                            setattr(persistent, name, sc.NAME)
+                            break
+            else:
+                raise ValueError(
+                    __("{0} не является поисковым сервисом.").format(
+                        new_search_engine
+                    )
+                )
+
         @property
         def xalign(self):
             xalign, yalign = self._alignment_to_tuple(self.alignment)
@@ -127,7 +158,7 @@ init -2 python in _whatPlaying:
             alignment_data = "{0}{1}".format(yalign, xalign)
             if alignment_data == "cc":
                 return 'c'
-            return alignment_data
+            return alignment_data.strip('c')
 
         @classmethod
         def _alignment_to_tuple(cls, alignment_data):

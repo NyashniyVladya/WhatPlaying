@@ -11,6 +11,9 @@ init -5 python in _whatPlaying:
     import random
     import zipfile
     import threading
+    import urllib
+    import urllib2
+    import webbrowser
     import pygame_sdl2 as pygame
     from os import path
     from renpy.audio.audio import get_channel
