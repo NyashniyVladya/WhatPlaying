@@ -1,8 +1,16 @@
 ﻿
-init python:
+init 100 python:
+
+    # TODO Drag&Drop
+    # TODO Spam filter
+    # TODO Пикчи бара
+
     config.debug_sound = True
     config.debug_equality = True
     
+    # with _what_playing_build._RPA("WhatPlaying") as _rpa:
+        # _rpa._pack()
+
 screen test_music:
 
     default music_array = tuple(

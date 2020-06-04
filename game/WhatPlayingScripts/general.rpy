@@ -1,5 +1,5 @@
 ﻿
-init -1 python in _whatPlaying:
+init 6 python in _whatPlaying:
 
     """
     Внимание! Возможны багосы с кодировками на версиях ренпая старше 6.99.12.
@@ -16,10 +16,6 @@ init -1 python in _whatPlaying:
     class _AlbumCover(renpy.Displayable, NoRollback):
         
         __author__ = "Vladya"
-        
-        placeholders_archive = path.abspath(
-            renpy.loader.transfn("albumCoverPlaceholders.zip")
-        )
 
         def __init__(self, metadata_object):
             
@@ -28,15 +24,20 @@ init -1 python in _whatPlaying:
             if metadata_object.coveralbum_tag:
                 fn, picture_bytedata = metadata_object.coveralbum_tag
                 fn = "{0} {1}".format(metadata_object.__unicode__(), fn)
-                image = im.Data(data=picture_bytedata, filename=fn)
             else:
-                with zipfile.ZipFile(self.placeholders_archive, 'r') as _zip:
-                    image = im.ZipFileImage(
-                        self.placeholders_archive,
-                        random.choice(_zip.namelist())
-                    )
+                with renpy.file("albumCoverPlaceholders.zip") as _raw_zipfile:
+                    with zipfile.ZipFile(_raw_zipfile, 'r') as _archive:
+                        _placeholder = random.choice(_archive.infolist())
+                        with _archive.open(_placeholder, 'r') as _imagefile:
+                            fn = _imagefile.name
+                            picture_bytedata = b""
+                            while True:
+                                chunk = _imagefile.read((2 ** 20))
+                                if not chunk:
+                                    break
+                                picture_bytedata += chunk
 
-            self.__image = image
+            self.__image = im.Data(data=picture_bytedata, filename=fn)
             self.__square_area_len = None
 
 

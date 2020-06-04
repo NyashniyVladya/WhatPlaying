@@ -1,5 +1,5 @@
 
-init -3 python in _whatPlaying:
+init 3 python in _whatPlaying:
 
     """
     Класс реализации доп. функционала.

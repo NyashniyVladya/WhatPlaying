@@ -1,5 +1,5 @@
 ﻿
-init -2 python in _whatPlaying:
+init 5 python in _whatPlaying:
 
     """
     Классы для различных оптимизаций.

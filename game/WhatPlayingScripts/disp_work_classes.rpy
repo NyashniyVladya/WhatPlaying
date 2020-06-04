@@ -1,5 +1,5 @@
 
-init -3 python in _whatPlaying:
+init 4 python in _whatPlaying:
 
     """
     Классы для различных взаимодействий с Displayable.
@@ -49,7 +49,6 @@ init -3 python in _whatPlaying:
                 "style": "_wp_text",
                 "text": text,
                 "size": recalculate_to_screen_size(35),
-                "layout": "nobreak",
                 "text_align": self.__preferences.xalign
             }
             kwargs.update(text_kwargs)
@@ -89,12 +88,20 @@ init -3 python in _whatPlaying:
             
             # Если переданы конкретные размеры - они должны быть неизменны.
             if "width" in kwargs:
-                kwargs["xminimum"] = kwargs["width"]
-                kwargs["xmaximum"] = kwargs["width"]
-                
+                kwargs.update(
+                    dict.fromkeys(
+                        ("xsize", "xminimum", "xmaximum"),
+                        kwargs["width"]
+                    )
+                )
+
             if "height" in kwargs:
-                kwargs["yminimum"] = kwargs["height"]
-                kwargs["ymaximum"] = kwargs["height"]
+                kwargs.update(
+                    dict.fromkeys(
+                        ("ysize", "yminimum", "ymaximum"),
+                        kwargs["height"]
+                    )
+                )
 
             return renpy.display.behavior.Bar(**cls._add_args_object(kwargs))
             
@@ -109,10 +116,8 @@ init -3 python in _whatPlaying:
             kwargs = {
                 "text_text": text,
                 "text_style": "_wp_button_text",
-                "clicked": clicked,
-                "focus_mask": None,
-                "xpadding": 0,
-                "ypadding": 0
+                "style": "_wp_button",
+                "clicked": clicked
             }
             kwargs.update(tb_kwargs)
             
@@ -179,6 +184,7 @@ init -3 python in _whatPlaying:
                 _BoxClass = VBox
                 kwargs = {
                     "transform_xalign": xalign,
+                    "style": "_wp_vbox",
                     "spacing": int(disps[-1].disp.height_golden_small),
                     "box_reverse": (yalign > .5)
                 }
@@ -187,6 +193,7 @@ init -3 python in _whatPlaying:
                 _BoxClass = HBox
                 kwargs = {
                     "transform_yalign": yalign,
+                    "style": "_wp_hbox",
                     "spacing": int(disps[-1].disp.width_golden_small),
                     "box_reverse": (xalign < .5)
                 }
@@ -212,8 +219,12 @@ init -3 python in _whatPlaying:
             return _BoxClass(*childs, **box_kwargs)
             
         @classmethod
-        def Transform(cls, child, **kwargs):
-            kwargs["child"] = child
+        def Transform(cls, child, **_kwargs):
+            kwargs = {
+                "child": child,
+                "style": "_wp_transform"
+            }
+            kwargs.update(_kwargs)
             return Transform(**cls._add_args_object(kwargs))
 
     class DisplayableWrapper(NoRollback):

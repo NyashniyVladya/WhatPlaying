@@ -1,5 +1,5 @@
 
-init -5 python in _whatPlaying:
+init 1 python in _whatPlaying:
 
     """
     Импорты, всякие флаги, доп. функции.
