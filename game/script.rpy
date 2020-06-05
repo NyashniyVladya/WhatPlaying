@@ -2,14 +2,11 @@
 init 100 python:
 
     # TODO Drag&Drop
-    # TODO Spam filter
-    # TODO Пикчи бара
 
     config.debug_sound = True
     config.debug_equality = True
     
-    # with _what_playing_build._RPA("WhatPlaying") as _rpa:
-        # _rpa._pack()
+    # _what_playing_build.create_build(build_name="WhatPlaying")
 
 screen test_music:
 
@@ -32,6 +29,7 @@ screen test_music:
                 vbox:
                     for basename, renpy_name in music_array:
                         textbutton basename:
+                            text_style "_wp_button_text"
                             text_size  30
                             action Play("music", renpy_name)
             vbar value YScrollValue("test_music") yalign 1.
@@ -42,5 +40,6 @@ screen test_music:
 
 
 label start:
+    scene expression im.Image("background2.png")
     call screen test_music
     return

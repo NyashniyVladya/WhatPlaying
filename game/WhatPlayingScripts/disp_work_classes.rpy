@@ -48,7 +48,6 @@ init 4 python in _whatPlaying:
             kwargs = {
                 "style": "_wp_text",
                 "text": text,
-                "size": recalculate_to_screen_size(35),
                 "text_align": self.__preferences.xalign
             }
             kwargs.update(text_kwargs)
@@ -75,13 +74,13 @@ init 4 python in _whatPlaying:
             if bar_kwargs.get("vertical", False):
                 # Вертикальный бар.
                 kwargs = {
-                    "width": recalculate_to_screen_size(22),
+                    "width": recalculate_to_screen_size(27),
                     "style": "_wp_vbar"
                 }
             else:
                 # Горизонтальный.
                 kwargs = {
-                    "height": recalculate_to_screen_size(22, False),
+                    "height": recalculate_to_screen_size(27, False),
                     "style": "_wp_hbar"
                 }
             kwargs.update(bar_kwargs)
@@ -128,6 +127,19 @@ init 4 python in _whatPlaying:
             )
             button_kwargs["child"] = self.Text(**text_kwargs)
             return Button(**self._add_args_object(button_kwargs))
+
+        @classmethod
+        def ImageButton(cls, idle_image, hover_image, clicked, **ib_kwargs):
+            if not hover_image:
+                hover_image = cls.Transform(idle_image, alpha=PHI_CONST)
+            kwargs = {
+                "idle_image": idle_image,
+                "hover_image": hover_image,
+                "style": "_wp_imagebutton",
+                "clicked": clicked
+            }
+            kwargs.update(ib_kwargs)
+            return ImageButton(**cls._add_args_object(kwargs))
 
 
         def VBox(self, *disps, **_kwargs):
@@ -194,7 +206,7 @@ init 4 python in _whatPlaying:
                 kwargs = {
                     "transform_yalign": yalign,
                     "style": "_wp_hbox",
-                    "spacing": int(disps[-1].disp.width_golden_small),
+                    "spacing": int(disps[-1].disp.width_golden_big),
                     "box_reverse": (xalign < .5)
                 }
             kwargs.update(_kwargs)
@@ -217,6 +229,16 @@ init 4 python in _whatPlaying:
             childs = box_kwargs.pop("_childs")
             box_kwargs.pop("_vertical", None)
             return _BoxClass(*childs, **box_kwargs)
+            
+        @classmethod
+        def Window(cls, child, **_kwargs):
+            kwargs = {
+                "child": child,
+                "style": "_wp_window"
+            }
+            kwargs.update(_kwargs)
+            return Window(**cls._add_args_object(kwargs))
+            
             
         @classmethod
         def Transform(cls, child, **_kwargs):

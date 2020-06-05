@@ -30,7 +30,6 @@ init 3 python in _whatPlaying:
         query_search_field_name = None
         space_is_plus = True
 
-        
         @classmethod
         def quote(cls, *args, **kwargs):
             if cls.space_is_plus:
@@ -48,7 +47,7 @@ init 3 python in _whatPlaying:
             """
             Создаёт ссылку.
             :search_request:
-                Основной запрос. Может быть None, если запрос не явыляется
+                Основной запрос. Может быть None, если запрос не является
                 частью 'query' (как в niconico).
             :_work_url:
                 Объект 'urllib2.urlparse.ParseResult'.
@@ -131,7 +130,7 @@ init 3 python in _whatPlaying:
         
     class YandexSearch(SearchBase):
         
-        NAME = "Yandex"
+        NAME = "Яндекс"
         
         URL = urllib2.urlparse.urlparse("https://yandex.ru/search/")
         query_search_field_name = "text"
@@ -140,7 +139,7 @@ init 3 python in _whatPlaying:
         
     class YandexMusicSearch(YandexSearch):
         
-        NAME = "Yandex Music"
+        NAME = "Яндекc Музыка"
         
         URL = urllib2.urlparse.urlparse("https://music.yandex.ru/search")
         
@@ -181,6 +180,15 @@ init 3 python in _whatPlaying:
         URL = urllib2.urlparse.urlparse("https://vk.com/audio")
         query_search_field_name = 'q'
         space_is_plus = False
+        
+        
+    class WikipediaSearch(SearchBase):
+        
+        NAME = "Википедия"
+        
+        URL = urllib2.urlparse.urlparse("https://wikipedia.org/w/index.php")
+        query_search_field_name = "search"
+        space_is_plus = True
 
 
     class ExtraFunctional(NoRollback):
@@ -198,7 +206,8 @@ init 3 python in _whatPlaying:
             YandexMusicSearch,
             GoogleSearch,
             NicoNicoSearch,
-            VKSearch
+            VKSearch,
+            WikipediaSearch
         )
         
         
@@ -268,7 +277,7 @@ init 3 python in _whatPlaying:
                         Жми {{i}}ПКМ{{/i}}, чтобы найти её через сервис
                         {{i}}"{0}"{{/i}} (откроется браузер).
                         """
-                    ).format(self.search_engine.NAME)
+                    ).format(__(self.search_engine.NAME))
                     _text_info = DisplayableWrapper(
                         self.__viewer_object.disp_getter.Text(
                             unpack_multiline_string(text_view),
@@ -313,6 +322,36 @@ init 3 python in _whatPlaying:
                     *render_args
                 )
 
+            # Настройка показа информации.
+            text_view = __("Показывать {0} описание когда нет наведения.")
+            if self.__viewer_object.preferences.minimize:
+                text_view = text_view.format(__("полное"))
+            else:
+                text_view = text_view.format(__("краткое"))
+            button = DisplayableWrapper(
+                self.__viewer_object.disp_getter.TextButton(
+                    text_view,
+                    SetField(
+                        self.__viewer_object.preferences,
+                        "minimize",
+                        (not self.__viewer_object.preferences.minimize)
+                    )
+                ),
+                *render_args
+            )
+            
+            if base_block:
+                base_block = DisplayableWrapper(
+                    self.__viewer_object.disp_getter.VBox(
+                        base_block,
+                        button,
+                        spacing=0
+                    ),
+                    *render_args
+                )
+            else:
+                base_block = button
+
             # Описание альфа бара.
             text_view = __(
                 """
@@ -331,16 +370,13 @@ init 3 python in _whatPlaying:
                 ),
                 *render_args
             )
-            if base_block:
-                base_block = DisplayableWrapper(
-                    self.__viewer_object.disp_getter.VBox(
-                        base_block,
-                        alpha_bar_desc
-                    ),
-                    *render_args
-                )
-            else:
-                base_block = alpha_bar_desc
+            base_block = DisplayableWrapper(
+                self.__viewer_object.disp_getter.VBox(
+                    base_block,
+                    alpha_bar_desc
+                ),
+                *render_args
+            )
                 
             # Докидываем сообщения.
             messages = tuple(

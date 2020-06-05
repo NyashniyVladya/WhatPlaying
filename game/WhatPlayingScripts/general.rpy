@@ -17,7 +17,7 @@ init 6 python in _whatPlaying:
         
         __author__ = "Vladya"
 
-        def __init__(self, metadata_object):
+        def __init__(self, metadata_object, viewer_object):
             
             super(_AlbumCover, self).__init__()
             
@@ -38,13 +38,21 @@ init 6 python in _whatPlaying:
                                 picture_bytedata += chunk
 
             self.__image = im.Data(data=picture_bytedata, filename=fn)
+            self.__itunes_link = getattr(metadata_object, "trackViewUrl", None)
             self.__square_area_len = None
-
+            self.__viewer_object = viewer_object
+            
+            self.__itunes_button = None
+            self.__itunes_button_offset = None
 
         def __eq__(self, other):
-            if type(other) is not type(self):
+            if not self._equals(other):
                 return False
             if self._image != other._image:
+                return False
+            if self._itunes_link != other._itunes_link:
+                return False
+            if self.square_area_len != other.square_area_len:
                 return False
             return True
 
@@ -53,18 +61,36 @@ init 6 python in _whatPlaying:
             return self.__image
 
         @property
+        def _itunes_link(self):
+            return self.__itunes_link
+
+        @property
         def square_area_len(self):
             """
-            Длина стороны квадрата, куда будет вписана обложка альбома.
+            Длина стороны квадрата, в который будет вписана обложка альбома.
             """
             return self.__square_area_len
-            
+
         @square_area_len.setter
         def square_area_len(self, new_len):
             if not (isinstance(new_len, (int, float)) and (new_len > .0)):
                 raise ValueError(__("Неверное значение длины."))
             self.__square_area_len = float(new_len)
             renpy.redraw(self, .0)
+
+        def event(self, ev, x, y, st):
+            if self.__itunes_button and self.__itunes_button_offset:
+                xoff, yoff = self.__itunes_button_offset
+                x -= xoff
+                y -= yoff
+                if all(
+                    (
+                        (0 <= x <= self.__itunes_button.height),
+                        (0 <= y <= self.__itunes_button.width)
+                    )
+                ):
+                    self.__itunes_button.displayable.event(ev, x, y, st)
+                    raise renpy.IgnoreEvent()
 
         def render(self, width, height, st, at):
         
@@ -73,21 +99,81 @@ init 6 python in _whatPlaying:
                 renpy.redraw(self, .0)
                 return renpy.Render(1, 1)
             
-            surf = im.cache.get(self._image)
-            old_w, old_h = map(float, surf.get_size())
-            zoom_w, zoom_h = map(
-                lambda x: (self.square_area_len / x),
-                (old_w, old_h)
-            )
-            zoom = min(zoom_w, zoom_h)
-            new_w, new_h = map(lambda x: int((x * zoom)), (old_w, old_h))
+            render_args = (width, height, st, at)
+            image = DisplayableWrapper(self._image, *render_args)
             
-            rend = renpy.Render(new_w, new_h)
-            rend.blit(
-                renpy.display.scale.smoothscale(surf, (new_w, new_h)),
-                (0, 0)
+            zoom = min(
+                map(lambda x: (self.square_area_len / x), image.size)
             )
-            return rend
+            image = DisplayableWrapper(
+                self.__viewer_object.disp_getter.Transform(
+                    image.displayable,
+                    zoom=zoom
+                ),
+                *render_args
+            )
+            
+            render_object = renpy.Render(*map(int, image.size))
+            render_object.blit(image.surface, (0, 0))
+            
+            if self._itunes_link:
+                # Если есть ссылка на трек в iTunes.
+                _logo = DisplayableWrapper(
+                    im.MatrixColor(
+                        im.Image("whatPlayingImages/itunes_logo.jpg"),
+                        ( # Удаляем белый цвет жипег подложки.
+                             1.0,  0.0,  0.0, 0.0, 0.0,
+                             0.0,  1.0,  0.0, 0.0, 0.0,
+                             0.0,  0.0,  1.0, 0.0, 0.0,
+                            -1.0, -1.0, -1.0, 3.0, 0.0
+                        )
+                    ),
+                    *render_args
+                )
+                zoom = min(
+                    (image.width / _logo.width),
+                    (image.height / _logo.height)
+                )
+                _logo = DisplayableWrapper(
+                    self.__viewer_object.disp_getter.Transform(
+                        _logo.displayable,
+                        zoom=(zoom * (1. - PHI_CONST))
+                    ),
+                    *render_args
+                )
+                
+                button = self.__itunes_button = DisplayableWrapper(
+                    self.__viewer_object.disp_getter.ImageButton(
+                        idle_image=_logo.displayable,
+                        hover_image=None, # Автогенерация hover.
+                        clicked=Function(try_open_page, self._itunes_link)
+                    ),
+                    *render_args
+                )
+                
+                _pref = self.__viewer_object.preferences
+                xanchor, yanchor = _pref._alignment_to_tuple(_pref.alignment)
+                xpos, ypos = map(
+                    lambda a: ((a * .98) + .01),
+                    (xanchor, yanchor)
+                )
+                
+                xpos, ypos = self.__itunes_button_offset = (
+                    int(((image.width * xpos) - (button.width * xanchor))),
+                    int(((image.height * ypos) - (button.height * yanchor)))
+                )
+
+                render_object.blit(button.surface, (xpos, ypos))
+                
+                render_object.add_focus(
+                    self,
+                    x=xpos,
+                    y=ypos,
+                    w=int(button.width),
+                    h=int(button.height)
+                )
+
+            return render_object
     
     class RenPyAudioFile(audio.AudioFile, NoRollback):
     
@@ -117,7 +203,10 @@ init 6 python in _whatPlaying:
                     )
                     
             self.__viewer_object = viewer_object
-            self.__cover_album = _AlbumCover(metadata_object=self)
+            self.__cover_album = _AlbumCover(
+                metadata_object=self,
+                viewer_object=viewer_object
+            )
             
         def __nonzero__(self):
             return bool(self.title_tag)
@@ -274,10 +363,9 @@ init 6 python in _whatPlaying:
             """
             Находится ли модуль в "свёрнутом" режиме.
             """
-            # Пока что целиком зависит от 'self.__is_hovered'.
-            # Может добавлю ещё условий: настройка юзера, например.
-            return (not self.__is_hovered)
-            
+            if self.__is_hovered:
+                return False
+            return self.preferences.minimize
 
         def _get_metadata_object(self, filename=None, not_create=False):
             """
@@ -462,13 +550,31 @@ init 6 python in _whatPlaying:
             cover = DisplayableWrapper(metadata.cover_album, *render_args)
 
             # Горизонтальный контейнер с текстом и обложкой.
+            if is_minimized:
+                spacing = cover.width_golden_small
+            else:
+                spacing = (cover.width * .2)
             base_block = DisplayableWrapper(
-                self.disp_getter.HBox(text_block, (cover, {"yalign": .5})),
+                self.disp_getter.HBox(
+                    text_block,
+                    (cover, {"yalign": .5}),
+                    spacing=spacing
+                ),
                 *render_args
             )
             if is_minimized:
                 return base_block
 
+            # Оборачиваем в рамочку.
+            base_block = DisplayableWrapper(
+                self.disp_getter.Window(
+                    base_block.displayable,
+                    xpadding=7,
+                    ypadding=7
+                ),
+                *render_args
+            )
+        
             position = self._get_position()
             # Если известна позиция трека - отрисовываем статус-бар.
             if isinstance(position, float):
@@ -486,7 +592,7 @@ init 6 python in _whatPlaying:
                     self.disp_getter.VBox(base_block, status_bar),
                     *render_args
                 )
-            
+
             return base_block
 
         def render(self, width, height, st, at):
@@ -523,8 +629,8 @@ init 6 python in _whatPlaying:
                     *render_args
                 )
             
-            if not is_minimized:
-                # Если не свёрнуто - рисуем экстра блок и альфа-бар.
+            if self.__is_hovered:
+                # Если есть наведение - рисуем экстра блок и альфа-бар.
                 
                 # Рисуем экстра-блок.
                 extra_block = self.__extra.get_extra_block(*render_args)

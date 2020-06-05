@@ -14,7 +14,8 @@ init 1 python in _what_playing_build:
         DATA_FOR_PACKING = (
             "albumCoverPlaceholders.zip",
             ("WhatPlayingScripts", (".rpyc",)),
-            ("AudioMetaData", (".py",))
+            ("AudioMetaData", (".py",)),
+            ("whatPlayingImages", '*')
         )
         
         def __init__(self, name):
@@ -24,6 +25,11 @@ init 1 python in _what_playing_build:
             name = "{0}.rpa".format(*path.splitext(name))
             _rpa_name = path.abspath(path.join(config.basedir, name))
             super(_RPA, self).__init__(_rpa_name)
+
+        @classmethod
+        def create_build(cls, build_name):
+            with cls(build_name) as _rpa:
+                _rpa._pack()
 
         @staticmethod
         def _get_renpy_fn(filename, gamedir=None):
@@ -61,7 +67,8 @@ init 1 python in _what_playing_build:
                             for _path, _f, files in os.walk(folder):
                                 for _file in files:
                                     full_fn = path.join(_path, _file)
-                                    if path.splitext(full_fn)[-1] in exts:
+                                    ext = path.splitext(full_fn)[-1]
+                                    if (exts == '*') or (ext in exts):
                                         renpy_fn = self._get_renpy_fn(
                                             full_fn,
                                             searchpath

@@ -8,6 +8,7 @@ init 1 python in _whatPlaying:
     import __builtin__
     import io
     import re
+    import logging
     import random
     import zipfile
     import threading
@@ -24,23 +25,27 @@ init 1 python in _whatPlaying:
     from AudioMetaData import (
         audio,
         TagNotDefined,
-        WrongData
+        WrongData,
+        LOGGER as module_logger
     )
     from store import (
         im,
         config,
         persistent,
         NoRollback,
-        Transform,
-        HBox,
-        VBox,
-        Button,
-        Text,
         FieldValue,
         Function,
         Color,
         BarValue,
-        FieldEquality
+        FieldEquality,
+        SetField,
+        Transform,
+        HBox,
+        VBox,
+        Button,
+        ImageButton,
+        Text,
+        Window
     )
     try:
         from store import AudioData
@@ -50,27 +55,27 @@ init 1 python in _whatPlaying:
             Для более старых версий ренпая, где ещё не было AudioData.
             """
             pass
-    
-    
+
     DEBUG = True  # Флаг для отладки.
+    module_logger.setLevel((logging.DEBUG if DEBUG else logging.CRITICAL))
     
         
     # Константа золотого сечения. Для позиционирования объектов на экране.
     PHI_CONST = (((5. ** (1. / 2.)) - 1.) / 2.)
     
-    def recalculate_to_screen_size(value, width=True):
+    def recalculate_to_screen_size(value, is_width=True):
         """
         Пересчитывает значение под текущее разрешение экрана.
         Принимаемое значение инвариантно для разрешения 1920x1080.
 
-        :width:
+        :is_width:
             True - Считать от ширины
             False - От высоты
 
         """
         if not isinstance(value, (int, float)):
             raise TypeError(__("Неверный тип переданного значения."))
-        if width:
+        if is_width:
             coefficient = float(config.screen_width) / 1920.
         else:
             coefficient = float(config.screen_height) / 1080.
@@ -95,7 +100,7 @@ init 1 python in _whatPlaying:
         Удаляет избыточные пробелы и переносы в мультистроках
         (это которые вот как этот комментарий).
 
-        Для сохранения переноса добавлять в строку '{N}'.
+        Для сохранения переноса, добавлять в строку '{N}'.
         Сей символ будет заменён на перенос строки.
         """
         if not isinstance(string, basestring):
@@ -105,3 +110,8 @@ init 1 python in _whatPlaying:
         string = re.sub(r"\s*\{N\}\s*", '\n', string, flags=re.UNICODE)
         return string.strip()
 
+    def try_open_page(url):
+        try:
+            webbrowser.open_new_tab(url)
+        except Exception:
+            pass

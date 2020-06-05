@@ -18,7 +18,8 @@ init 5 python in _whatPlaying:
             "channel_name": "music",
             "alpha": 1.,
             "alignment": "tr",
-            "search_engine": "YouTube"
+            "search_engine": "YouTube",
+            "minimize": True
         }
         
         alignment_pattern = re.compile(
@@ -43,7 +44,25 @@ init 5 python in _whatPlaying:
             """
             Преобразует строку в имя persistent атрибута.
             """
-            return "_what_playing_pref_{0}_{1}".format(self.__pref_id, name)
+            return "what_playing_pref_{0}_{1}".format(self.__pref_id, name)
+            
+        @property
+        def minimize(self):
+            """
+            Сворачивать ли окно, когда нет наведения.
+            """
+            name = self._get_persistent_name("minimize")
+            with self.__locks["minimize"]:
+                return getattr(persistent, name)
+                
+        @minimize.setter
+        def minimize(self, new_minimize):
+            new_minimize = bool(new_minimize)
+            name = self._get_persistent_name("minimize")
+            with self.__locks["minimize"]:
+                if new_minimize != getattr(persistent, name):
+                    setattr(persistent, name, new_minimize)
+            
             
         @property
         def channel_name(self):
