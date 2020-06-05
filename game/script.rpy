@@ -2,11 +2,12 @@
 init 100 python:
 
     # TODO Drag&Drop
+    # TODO Fix Tags id3 2.2
 
     config.debug_sound = True
     config.debug_equality = True
     
-    # _what_playing_build.create_build(build_name="WhatPlaying")
+    # _what_playing_build._RPA.create_build(build_name="WhatPlaying")
 
 screen test_music:
 

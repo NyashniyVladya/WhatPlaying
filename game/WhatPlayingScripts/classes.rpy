@@ -216,7 +216,7 @@ init 5 python in _whatPlaying:
             raise TypeError(__("Неверный тип данных выравнивания."))
 
 
-    class _AudioPositionValue(BarValue, FieldEquality):
+    class _AudioPositionValue(BarValue, FieldEquality, NoRollback):
         
         identity_fields = ["viewer_object"]
         
@@ -238,21 +238,23 @@ init 5 python in _whatPlaying:
                 self.adjustment.change(position)
             return .0
 
-    class _ScanThreadStatusValue(BarValue, FieldEquality):
+    class _ScanThreadStatusValue(BarValue, FieldEquality, NoRollback):
+        
+        identity_fields = ["scanner"]
         
         def __init__(self, scanner_thread_object):
-            self.__scanner = scanner_thread_object
+            self.scanner = scanner_thread_object
             
         def get_adjustment(self):
             self.adjustment = ui.adjustment(
                 range=1.,
-                value=self.__scanner.scan_status,
+                value=self.scanner.scan_status,
                 adjustable=False
             )
             return self.adjustment
             
         def periodic(self, st):
-            self.adjustment.change(self.__scanner.scan_status)
+            self.adjustment.change(self.scanner.scan_status)
             return .0
             
 

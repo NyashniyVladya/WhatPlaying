@@ -269,40 +269,42 @@ init 3 python in _whatPlaying:
             """
             base_block = None
             if self.__viewer_object.scanner_thread.scan_completed:
-                if self.__viewer_object._get_metadata_object():
-                    text_view = __(
-                        """
-                        Жми {{i}}ЛКМ{{/i}} на нужную часть информации о песне,
-                        чтобы скопировать её в {{i}}буфер обмена{{/i}}.{{N}}
-                        Жми {{i}}ПКМ{{/i}}, чтобы найти её через сервис
-                        {{i}}"{0}"{{/i}} (откроется браузер).
-                        """
-                    ).format(__(self.search_engine.NAME))
-                    _text_info = DisplayableWrapper(
-                        self.__viewer_object.disp_getter.Text(
-                            unpack_multiline_string(text_view),
-                            layout="tex"
-                        ),
-                        *render_args
-                    )
-                    text_view = __(
-                        "Жми на эту надпись, чтобы сменить сервис поиска."
-                    )
-                    _button = DisplayableWrapper(
-                        self.__viewer_object.disp_getter.TextButton(
-                            text_view,
-                            Function(self._set_next_search_engine)
-                        ),
-                        *render_args
-                    )
-                    base_block = DisplayableWrapper(
-                        self.__viewer_object.disp_getter.VBox(
-                            _text_info,
-                            _button,
-                            spacing=0
-                        ),
-                        *render_args
-                    )
+                if not config.skipping:
+                    if self.__viewer_object._get_metadata_object():
+                        text_view = __(
+                            """
+                            Жми {{i}}ЛКМ{{/i}} на нужную часть
+                            информации о песне, чтобы скопировать её
+                            в {{i}}буфер обмена{{/i}}.{{N}}
+                            Жми {{i}}ПКМ{{/i}}, чтобы найти её через сервис
+                            {{i}}"{0}"{{/i}} (откроется браузер).
+                            """
+                        ).format(__(self.search_engine.NAME))
+                        _text_info = DisplayableWrapper(
+                            self.__viewer_object.disp_getter.Text(
+                                unpack_multiline_string(text_view),
+                                layout="subtitle"
+                            ),
+                            *render_args
+                        )
+                        text_view = __(
+                            "Жми на эту надпись, чтобы сменить сервис поиска."
+                        )
+                        _button = DisplayableWrapper(
+                            self.__viewer_object.disp_getter.TextButton(
+                                text_view,
+                                Function(self._set_next_search_engine)
+                            ),
+                            *render_args
+                        )
+                        base_block = DisplayableWrapper(
+                            self.__viewer_object.disp_getter.VBox(
+                                _text_info,
+                                _button,
+                                spacing=0
+                            ),
+                            *render_args
+                        )
                     
             else:
                 # Скан ещё идёт.
@@ -317,7 +319,7 @@ init 3 python in _whatPlaying:
                 base_block = DisplayableWrapper(
                     self.__viewer_object.disp_getter.Text(
                         unpack_multiline_string(text_view),
-                        layout="tex"
+                        layout="subtitle"
                     ),
                     *render_args
                 )
@@ -366,7 +368,7 @@ init 3 python in _whatPlaying:
             alpha_bar_desc = DisplayableWrapper(
                 self.__viewer_object.disp_getter.Text(
                     unpack_multiline_string(text_view).format(_direction),
-                    layout="tex"
+                    layout="subtitle"
                 ),
                 *render_args
             )

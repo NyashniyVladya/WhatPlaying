@@ -26,7 +26,7 @@ init 1 python in _whatPlaying:
         audio,
         TagNotDefined,
         WrongData,
-        LOGGER as module_logger
+        LOGGER
     )
     from store import (
         im,
@@ -57,7 +57,8 @@ init 1 python in _whatPlaying:
             pass
 
     DEBUG = True  # Флаг для отладки.
-    module_logger.setLevel((logging.DEBUG if DEBUG else logging.CRITICAL))
+    LOGGER.setLevel((logging.DEBUG if DEBUG else logging.CRITICAL))
+    _logger = LOGGER.getChild("RenPyLogger")
     
         
     # Константа золотого сечения. Для позиционирования объектов на экране.

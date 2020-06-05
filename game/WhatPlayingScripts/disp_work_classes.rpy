@@ -261,7 +261,7 @@ init 4 python in _whatPlaying:
         __author__ = "Vladya"
         
         DISP_CACHE = []
-        CACHE_MAX_SIZE = 5000
+        CACHE_MAX_SIZE = 100
         cache_lock = threading.Lock()
         
         def __init__(self, disp, width, height, st, at):
@@ -270,6 +270,10 @@ init 4 python in _whatPlaying:
                 raise Exception(__("Передан не 'renpy.Displayable'."))
 
             with self.cache_lock:
+            
+                if len(self.DISP_CACHE) > self.CACHE_MAX_SIZE:
+                    self.__class__.DISP_CACHE = []
+                    _logger.debug("Кэш очищен по причине заполнения.")
 
                 for cached_disp in self.DISP_CACHE:
                     if self.is_equal_two_disp(disp, cached_disp):
@@ -280,11 +284,9 @@ init 4 python in _whatPlaying:
                         break
                 else:
                     self.DISP_CACHE.append(disp)
+                    _logger.debug("Размер кэша: %d.", len(self.DISP_CACHE))
 
-                if len(self.DISP_CACHE) > self.CACHE_MAX_SIZE:
-                    self.__class__.DISP_CACHE = []
-                    
-            
+
             self.__displayable = disp
             self.__render_args = (width, height, st, at)
             
@@ -299,6 +301,7 @@ init 4 python in _whatPlaying:
         def _clear_cache(cls):
             with cls.cache_lock:
                 cls.DISP_CACHE = []
+                _logger.debug("Кэш очищен принудительно.")
 
         def is_equal_two_disp(self, disp1, disp2):
         
@@ -306,7 +309,7 @@ init 4 python in _whatPlaying:
             Проверяет, идентичны ли два диспа по аргументам инициализатора.
             """
 
-            # Оба объекта должны быть диспами
+            # Оба объекта должны быть диспами.
             if not isinstance(disp1, renpy.display.core.Displayable):
                 return False
             if not isinstance(disp2, renpy.display.core.Displayable):
@@ -358,8 +361,13 @@ init 4 python in _whatPlaying:
                 # Диспы тоже.
                 if not self.is_equal_two_disp(value1, value2):
                     return False
+            elif hasattr(value1, "__eq__"):
+                # Да, это надо делать так.
+                # В ранних ренпаях (<=7.1.0) поломан механизм __eq__/__ne__.
+                # В поздних - Пайтом сие починил. Но, совместимость, все дела.
+                return value1.__eq__(value2)
             else:
-                # Иные типы проверяем обычным образом.
+                # Иной тип данных.
                 if value1 != value2:
                     return False
             return True

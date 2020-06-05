@@ -46,15 +46,7 @@ init 6 python in _whatPlaying:
             self.__itunes_button_offset = None
 
         def __eq__(self, other):
-            if not self._equals(other):
-                return False
-            if self._image != other._image:
-                return False
-            if self._itunes_link != other._itunes_link:
-                return False
-            if self.square_area_len != other.square_area_len:
-                return False
-            return True
+            return (self is other)
 
         @property
         def _image(self):
@@ -605,22 +597,29 @@ init 6 python in _whatPlaying:
                 if DEBUG and self.scanner_thread.exception:
                     # Во время сканирования произошла ошибка.
                     raise self.scanner_thread.exception
-
-                metadata = self._get_metadata_object()
-                # Основной блок. Текстовые данные.
-                if metadata:
-                    # Музыка играет. Данные доступны.
-                    general_block = self._get_base_block(
-                        metadata,
-                        is_minimized,
+                
+                if config.skipping:
+                    # Перемотка.
+                    general_block = DisplayableWrapper(
+                        self.disp_getter.Text(__("Вж-ж-ж-ж-ж.")),
                         *render_args
                     )
                 else:
-                    # Тишина в эфире.
-                    general_block = DisplayableWrapper(
-                        self.disp_getter.Text(__("Тишина в эфире.")),
-                        *render_args
-                    )
+                    metadata = self._get_metadata_object()
+                    # Основной блок. Текстовые данные.
+                    if metadata:
+                        # Музыка играет. Данные доступны.
+                        general_block = self._get_base_block(
+                            metadata,
+                            is_minimized,
+                            *render_args
+                        )
+                    else:
+                        # Тишина в эфире.
+                        general_block = DisplayableWrapper(
+                            self.disp_getter.Text(__("Тишина в эфире.")),
+                            *render_args
+                        )
                     
             else:
                 # Идёт сканирование. Выводим информацию.
@@ -699,10 +698,7 @@ init 6 python in _whatPlaying:
 
             renpy.redraw(self, .0)
             return render_object
-            
-        
-            
-            
+
     renpy.display.screen.define_screen(
         MetaDataViewer.__name__,
         MetaDataViewer(),
