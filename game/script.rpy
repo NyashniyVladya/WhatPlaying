@@ -1,6 +1,7 @@
 ﻿
 init 100 python:
 
+    config.debug = True
     config.debug_sound = True
     config.debug_equality = True
 
@@ -12,25 +13,28 @@ screen test_music:
         hbox:
             align (.5, .5)
             ysize .75
-            spacing 70
-            box_reverse True
+            spacing _whatPlaying.recalculate_to_screen_size(300)
+            hbox:
+                yalign 1.
+                box_reverse True
+                spacing _whatPlaying.recalculate_to_screen_size(50)
+                viewport id "test_music":
+                    yalign 1.
+                    mousewheel True
+                    draggable True
+                    xfill False
+                    yfill False
+                    vbox:
+                        for basename, renpy_name in music_array:
+                            textbutton basename:
+                                style "_wp_button"
+                                text_style "_wp_button_text"
+                                action Play("music", renpy_name)
+                vbar value YScrollValue("test_music") yalign 1.
             vbox:
                 yalign 1.
-                text _("Что включить?") xalign .0 size 100
+                text _("Что включить?") xalign .0 size 80 style "_wp_text"
                 textbutton _("Выйти") xalign 1. action Return()
-            viewport id "test_music":
-                yalign 1.
-                mousewheel True
-                draggable True
-                xfill False
-                yfill False
-                vbox:
-                    for basename, renpy_name in music_array:
-                        textbutton basename:
-                            style "_wp_button"
-                            text_style "_wp_button_text"
-                            action Play("music", renpy_name)
-            vbar value YScrollValue("test_music") yalign 1.
     else:
         vbox:
             align (.75, .75)
@@ -49,6 +53,17 @@ label start:
                 "Готово."
             "Настройки рендера":
                 call screen _choose_renderer
+            "Переключить язык":
+                $ renpy.change_language(
+                    menu(
+                        (("Русский", "None"),) + tuple(
+                            map(
+                                lambda x: (x.title(), x),
+                                renpy.known_languages()
+                            )
+                        )
+                    )
+                )
             "Тестировать":
                 call screen test_music
     return

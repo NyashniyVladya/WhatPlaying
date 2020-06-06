@@ -24,11 +24,13 @@ init 1 python in _whatPlaying:
     )
     from AudioMetaData import (
         audio,
+        itunes,
         TagNotDefined,
         WrongData,
         LOGGER
     )
     from store import (
+        _preferences,
         im,
         config,
         persistent,
@@ -60,7 +62,19 @@ init 1 python in _whatPlaying:
     DEBUG = True  # Флаг для отладки.
     LOGGER.setLevel((logging.DEBUG if DEBUG else logging.CRITICAL))
     _logger = LOGGER.getChild("RenPyLogger")
+    languages_codes = {
+        "russian": "RU",
+        "english": "US",
+        "spanish": "ES",
+        "italian": "IT",
+        "chinese": "CN",
+        "latvian": "LV"
+    }
 
+    itunes.ITunesWebParser.ITUNES_COUNTRY = languages_codes.get(
+        _preferences.language,
+        None
+    )
 
     # Константа золотого сечения. Для позиционирования объектов на экране.
     PHI_CONST = (((5. ** (1. / 2.)) - 1.) / 2.)

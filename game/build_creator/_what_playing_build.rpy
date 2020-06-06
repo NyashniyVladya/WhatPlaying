@@ -1,11 +1,12 @@
 
-init 1 python in _what_playing_build:
+init 11 python in _what_playing_build:
 
     import os
     from os import path
     from store import (
         archiver,
-        config
+        config,
+        _whatPlaying
     )
 
     class _RPA(archiver.Archive):
@@ -15,6 +16,13 @@ init 1 python in _what_playing_build:
             ("WhatPlayingScripts", (".rpyc",)),
             ("AudioMetaData", (".py",)),
             ("whatPlayingImages", '*')
+        )
+        DATA_FOR_PACKING += tuple(
+            # Переводы.
+            map(
+                lambda x: ("tl/{0}/WhatPlayingScripts".format(x), (".rpyc",)),
+                _whatPlaying.languages_codes.iterkeys()
+            )
         )
 
         def __init__(self, name):

@@ -27,7 +27,7 @@ from .other_data import (
 )
 
 __author__ = "Vladya"
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 
 USE_WEB_DB = True
 

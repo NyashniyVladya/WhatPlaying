@@ -129,6 +129,7 @@ init 3 python in _whatPlaying:
     class YandexSearch(SearchBase):
 
         NAME = "Яндекс"
+        __("Яндекс")  # Для правильной генерации файла переводов.
 
         URL = urllib2.urlparse.urlparse("https://yandex.ru/search/")
         query_search_field_name = "text"
@@ -137,6 +138,7 @@ init 3 python in _whatPlaying:
     class YandexMusicSearch(YandexSearch):
 
         NAME = "Яндекc Музыка"
+        __("Яндекc Музыка")
 
         URL = urllib2.urlparse.urlparse("https://music.yandex.ru/search")
 
@@ -170,6 +172,7 @@ init 3 python in _whatPlaying:
     class VKSearch(SearchBase):
 
         NAME = "ВКонтакте"
+        __("ВКонтакте")
 
         URL = urllib2.urlparse.urlparse("https://vk.com/audio")
         query_search_field_name = 'q'
@@ -178,7 +181,10 @@ init 3 python in _whatPlaying:
     class WikipediaSearch(SearchBase):
 
         NAME = "Википедия"
+        __("Википедия")
 
-        URL = urllib2.urlparse.urlparse("https://wikipedia.org/w/index.php")
+        URL = urllib2.urlparse.urlparse(
+            __("https://ru.wikipedia.org/w/index.php")
+        )
         query_search_field_name = "search"
         space_is_plus = True

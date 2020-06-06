@@ -260,7 +260,7 @@ init 4 python in _whatPlaying:
         def __init__(self, disp, width, height, st, at):
 
             if not isinstance(disp, renpy.display.core.Displayable):
-                raise Exception(__("Передан не 'renpy.Displayable'."))
+                raise TypeError(__("Передан не 'renpy.Displayable'."))
 
             with self.cache_lock:
 

@@ -132,6 +132,7 @@ class ITunesWebParser(object):
     CACHE_FOLDER = path.join(DATABASE_FOLDER, u"WebCache")
     RPM = 20.  # Request per minute
     LAST_REQUEST = .0
+    ITUNES_COUNTRY = None
 
     WEBPAGE_FILE_LOCK = threading.Lock()
     WEB_LOCK = threading.Lock()
@@ -160,8 +161,10 @@ class ITunesWebParser(object):
 
             try:
                 variants = self._get_results_about_track()
-            except InternetConnectionError:
+            except InternetConnectionError as ex:
                 self.LOGGER.info("No internet connection.")
+                if ex.message:
+                    self.LOGGER.debug(ex.message)
                 return None
             except JSONError:
                 self.LOGGER.error("JSON decode error.")
@@ -270,7 +273,7 @@ class ITunesWebParser(object):
 
         _params = {
             "term": term,
-            "country": "RU",
+            "country": (cls.ITUNES_COUNTRY or "RU"),
             "media": "music",
             "entity": "musicTrack",
             "attribute": "mixTerm",

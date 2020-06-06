@@ -374,7 +374,7 @@ init 10 python in _whatPlaying:
                     self.preferences.alignment
                 )
                 xpos, ypos = map(
-                    lambda a: ((a * .98) + .01),
+                    lambda a: ((a * .998) + .001),
                     (xanchor, yanchor)
                 )
                 xpos = int(((width * xpos) - (w * xanchor)))

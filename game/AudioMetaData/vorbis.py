@@ -167,7 +167,7 @@ class VorbisComment(AudioTag):
         """
 
         if not isinstance(data, bytes):
-            raise Exception("Wrong type {0}.".format(type(data)))
+            raise TypeError("Wrong type {0}.".format(type(data)))
 
         while True:
 
