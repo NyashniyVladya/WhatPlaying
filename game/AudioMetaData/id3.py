@@ -475,13 +475,20 @@ class ID3V2(AudioTag):
             if key in self._frames:
                 return self._frames[key]
 
-            user_data = (
-                (self._frames.get("TXXX", ()) + self._frames.get("WXXX", ()))
-            )
-            for description, data in user_data:
-                if key == description:
-                    return data
+            user_data = {}
+            for _tag in ("TXXX", "TXX", "WXXX", "WXX"):
+                user_data.update(self._frames.get(_tag, ()))
+            if key in user_data:
+                return user_data[key]
+
         raise AttributeError(key)
+
+    def __repr__(self):
+        return "<AudioTag {0} ({2}.{3}.{4}): {1}>".format(
+            self.__class__.__name__,
+            (self.__str__() or "Not detected basic metadata"),
+            *self.VERSION
+        )
 
     @staticmethod
     def parse_size(int_or_bytes_array, synchsafe=False):
@@ -642,7 +649,7 @@ class ID3V2(AudioTag):
             if self.VERSION[1] == 2:
 
                 if self.UNSYNCHRONISATION_FLAG:
-                    self.LOGGER.debug("%s is unsync.", frame_id)
+                    self.LOGGER.info("%s is unsync.", frame_id)
                     frame_data = re.sub(r"\xff\x00", "\xff", frame_data)
 
                 return (frame_id, frame_data)
@@ -695,18 +702,18 @@ class ID3V2(AudioTag):
             frame_data = frame.read()
 
         if description_flags["GROUPING_FLAG"]:
-            self.LOGGER.debug("%s in group %d.", frame_id, group_id)
+            self.LOGGER.info("%s in group %d.", frame_id, group_id)
 
         if description_flags["UNSYNC_FLAG"]:
-            self.LOGGER.debug("%s is unsync.", frame_id)
+            self.LOGGER.info("%s is unsync.", frame_id)
             frame_data = re.sub(r"\xff\x00", "\xff", frame_data)
 
         if description_flags["COMPRESSION_FLAG"]:
-            self.LOGGER.debug("%s is compressed.", frame_id)
+            self.LOGGER.info("%s is compressed.", frame_id)
             frame_data = zlib.decompress(frame_data)
 
         if description_flags["ENCRYPTION_FLAG"]:
-            self.LOGGER.debug("%s is encrypted.", frame_id)
+            self.LOGGER.info("%s is encrypted.", frame_id)
             raise SkipFrame("Decryption is not supported.")
 
         return (frame_id, frame_data)

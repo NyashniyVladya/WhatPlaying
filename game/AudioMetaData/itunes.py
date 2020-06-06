@@ -161,6 +161,7 @@ class ITunesWebParser(object):
             try:
                 variants = self._get_results_about_track()
             except InternetConnectionError:
+                self.LOGGER.info("No internet connection.")
                 return None
             except JSONError:
                 self.LOGGER.error("JSON decode error.")
@@ -262,7 +263,7 @@ class ITunesWebParser(object):
                 raise JSONError(ex.message)
         if u"results" not in results:
             raise JSONError()
-        return results[u"results"]
+        return tuple(sorted(results[u"results"]))
 
     @classmethod
     def search(cls, term, **search_params):

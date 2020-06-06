@@ -10,14 +10,13 @@ init 1 python in _what_playing_build:
 
     class _RPA(archiver.Archive):
 
-
         DATA_FOR_PACKING = (
             "albumCoverPlaceholders.zip",
             ("WhatPlayingScripts", (".rpyc",)),
             ("AudioMetaData", (".py",)),
             ("whatPlayingImages", '*')
         )
-        
+
         def __init__(self, name):
             """
             Архив будет размещён в основной директории игры (НЕ в game).

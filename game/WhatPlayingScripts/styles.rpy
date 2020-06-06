@@ -10,7 +10,6 @@ init 2:
     style _wp_button_text is _wp_text:
         hover_color "#888"
 
-    # Пикчи
     style _wp_vbar is default:
         bar_vertical True
         top_bar Frame("whatPlayingImages/bar_empty.png", 6, 6, tile=True)
@@ -37,7 +36,7 @@ init 2:
 
     style _wp_button is default:
         focus_mask None
-        
+
     style _wp_imagebutton is _wp_button:
         focus_mask True
 
@@ -47,3 +46,6 @@ init 2:
         background Frame("whatPlayingImages/frame.png", 6, 6, tile=True)
         xpadding 5
         ypadding 5
+
+    style _wp_drag is default:
+        focus_mask None

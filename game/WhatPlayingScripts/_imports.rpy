@@ -4,7 +4,7 @@ init 1 python in _whatPlaying:
     """
     Импорты, всякие флаги, доп. функции.
     """
-    
+
     import __builtin__
     import io
     import re
@@ -45,7 +45,8 @@ init 1 python in _whatPlaying:
         Button,
         ImageButton,
         Text,
-        Window
+        Window,
+        Drag
     )
     try:
         from store import AudioData
@@ -59,11 +60,11 @@ init 1 python in _whatPlaying:
     DEBUG = True  # Флаг для отладки.
     LOGGER.setLevel((logging.DEBUG if DEBUG else logging.CRITICAL))
     _logger = LOGGER.getChild("RenPyLogger")
-    
-        
+
+
     # Константа золотого сечения. Для позиционирования объектов на экране.
     PHI_CONST = (((5. ** (1. / 2.)) - 1.) / 2.)
-    
+
     def recalculate_to_screen_size(value, is_width=True):
         """
         Пересчитывает значение под текущее разрешение экрана.
@@ -106,7 +107,7 @@ init 1 python in _whatPlaying:
         """
         if not isinstance(string, basestring):
             raise TypeError(__("Передан не текст."))
-        
+
         string = re.sub(r"\s+", ' ', string, flags=re.UNICODE)
         string = re.sub(r"\s*\{N\}\s*", '\n', string, flags=re.UNICODE)
         return string.strip()
@@ -114,5 +115,9 @@ init 1 python in _whatPlaying:
     def try_open_page(url):
         try:
             webbrowser.open_new_tab(url)
-        except Exception:
-            pass
+        except Exception as ex:
+            _logger.error(
+                "Ошибка при открытии страницы '%s'\n%s.",
+                url,
+                ex.message
+            )

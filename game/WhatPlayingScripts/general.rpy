@@ -1,352 +1,96 @@
 ﻿
-init 6 python in _whatPlaying:
+init 10 python in _whatPlaying:
 
     """
+    Disclaimer:
     Внимание! Возможны багосы с кодировками на версиях ренпая старше 6.99.12.
     (https://www.renpy.org/doc/html/changelog.html#ren-py-6-99-12)
     Багрепорты по этим версиям не принимаются.
-    
+
     Код пишется с расчётом, что дефолтная строка ("") имеет тип unicode,
     а сей функционал ПайТом завёз только в RenPy 6.99.12 и моложе.
-    
+
     Код является рабочим на версии 7.3.5 (последняя на момент его написания).
     """
 
 
-    class _AlbumCover(renpy.Displayable, NoRollback):
-        
-        __author__ = "Vladya"
-
-        def __init__(self, metadata_object, viewer_object):
-            
-            super(_AlbumCover, self).__init__()
-            
-            if metadata_object.coveralbum_tag:
-                fn, picture_bytedata = metadata_object.coveralbum_tag
-                fn = "{0} {1}".format(metadata_object.__unicode__(), fn)
-            else:
-                with renpy.file("albumCoverPlaceholders.zip") as _raw_zipfile:
-                    with zipfile.ZipFile(_raw_zipfile, 'r') as _archive:
-                        _placeholder = random.choice(_archive.infolist())
-                        with _archive.open(_placeholder, 'r') as _imagefile:
-                            fn = _imagefile.name
-                            picture_bytedata = b""
-                            while True:
-                                chunk = _imagefile.read((2 ** 20))
-                                if not chunk:
-                                    break
-                                picture_bytedata += chunk
-
-            self.__image = im.Data(data=picture_bytedata, filename=fn)
-            self.__itunes_link = getattr(metadata_object, "trackViewUrl", None)
-            self.__square_area_len = None
-            self.__viewer_object = viewer_object
-            
-            self.__itunes_button = None
-            self.__itunes_button_offset = None
-
-        def __eq__(self, other):
-            return (self is other)
-
-        @property
-        def _image(self):
-            return self.__image
-
-        @property
-        def _itunes_link(self):
-            return self.__itunes_link
-
-        @property
-        def square_area_len(self):
-            """
-            Длина стороны квадрата, в который будет вписана обложка альбома.
-            """
-            return self.__square_area_len
-
-        @square_area_len.setter
-        def square_area_len(self, new_len):
-            if not (isinstance(new_len, (int, float)) and (new_len > .0)):
-                raise ValueError(__("Неверное значение длины."))
-            self.__square_area_len = float(new_len)
-            renpy.redraw(self, .0)
-
-        def event(self, ev, x, y, st):
-            if self.__itunes_button and self.__itunes_button_offset:
-                xoff, yoff = self.__itunes_button_offset
-                x -= xoff
-                y -= yoff
-                if all(
-                    (
-                        (0 <= x <= self.__itunes_button.height),
-                        (0 <= y <= self.__itunes_button.width)
-                    )
-                ):
-                    self.__itunes_button.displayable.event(ev, x, y, st)
-                    raise renpy.IgnoreEvent()
-
-        def render(self, width, height, st, at):
-        
-            if not self.square_area_len:
-                # Ждём установки размера.
-                renpy.redraw(self, .0)
-                return renpy.Render(1, 1)
-            
-            render_args = (width, height, st, at)
-            image = DisplayableWrapper(self._image, *render_args)
-            
-            zoom = min(
-                map(lambda x: (self.square_area_len / x), image.size)
-            )
-            image = DisplayableWrapper(
-                self.__viewer_object.disp_getter.Transform(
-                    image.displayable,
-                    zoom=zoom
-                ),
-                *render_args
-            )
-            
-            render_object = renpy.Render(*map(int, image.size))
-            render_object.blit(image.surface, (0, 0))
-            
-            if self._itunes_link:
-                # Если есть ссылка на трек в iTunes.
-                _logo = DisplayableWrapper(
-                    im.MatrixColor(
-                        im.Image("whatPlayingImages/itunes_logo.jpg"),
-                        ( # Удаляем белый цвет жипег подложки.
-                             1.0,  0.0,  0.0, 0.0, 0.0,
-                             0.0,  1.0,  0.0, 0.0, 0.0,
-                             0.0,  0.0,  1.0, 0.0, 0.0,
-                            -1.0, -1.0, -1.0, 3.0, 0.0
-                        )
-                    ),
-                    *render_args
-                )
-                zoom = min(
-                    (image.width / _logo.width),
-                    (image.height / _logo.height)
-                )
-                _logo = DisplayableWrapper(
-                    self.__viewer_object.disp_getter.Transform(
-                        _logo.displayable,
-                        zoom=(zoom * (1. - PHI_CONST))
-                    ),
-                    *render_args
-                )
-                
-                button = self.__itunes_button = DisplayableWrapper(
-                    self.__viewer_object.disp_getter.ImageButton(
-                        idle_image=_logo.displayable,
-                        hover_image=None, # Автогенерация hover.
-                        clicked=Function(try_open_page, self._itunes_link)
-                    ),
-                    *render_args
-                )
-                
-                _pref = self.__viewer_object.preferences
-                xanchor, yanchor = _pref._alignment_to_tuple(_pref.alignment)
-                xpos, ypos = map(
-                    lambda a: ((a * .98) + .01),
-                    (xanchor, yanchor)
-                )
-                
-                xpos, ypos = self.__itunes_button_offset = (
-                    int(((image.width * xpos) - (button.width * xanchor))),
-                    int(((image.height * ypos) - (button.height * yanchor)))
-                )
-
-                render_object.blit(button.surface, (xpos, ypos))
-                
-                render_object.add_focus(
-                    self,
-                    x=xpos,
-                    y=ypos,
-                    w=int(button.width),
-                    h=int(button.height)
-                )
-
-            return render_object
-    
-    class RenPyAudioFile(audio.AudioFile, NoRollback):
-    
-        def __init__(self, filename, viewer_object):
-        
-            """
-            Обёртка над основным классом, для работы в ренпае.
-            :filename:
-                Имя файла в ренпаевском формате, либо объект AudioData.
-            """
-            
-            if not isinstance(filename, basestring):
-                raise TypeError(__("Неверный тип имени файла."))
-            
-            if isinstance(filename, AudioData):
-                super(RenPyAudioFile, self).__init__(
-                    audio=filename.data,
-                    datatype="bytes",
-                    filename=filename
-                )
-            else:
-                with renpy.file(filename) as _file:
-                    super(RenPyAudioFile, self).__init__(
-                        audio=_file,
-                        datatype="fileObject",
-                        filename=filename
-                    )
-                    
-            self.__viewer_object = viewer_object
-            self.__cover_album = _AlbumCover(
-                metadata_object=self,
-                viewer_object=viewer_object
-            )
-            
-        def __nonzero__(self):
-            return bool(self.title_tag)
-            
-        @property
-        def cover_album(self):
-            return self.__cover_album
-            
-        def _get_info_displayables(self, only_title=False):
-            
-            """
-            Возвращает кортеж Displayable с информацией о песне или None.
-            (Для размещения в вертикальном контейнере)
-            
-            :only_title:
-                Вернуть только Displayable названия.
-            
-            Без флага 'only_title' кортеж будет иметь вид:
-                (
-                    "Артист - Название",
-                               "Альбом",
-                           "07.11.1917",
-                                 "Жанр"
-                )
-
-            """
-            artist = title = album = date = genre = None
-            if self.artist_tag:
-                artist = "{{b}}{0}{{/b}}".format(quote_text(self.artist_tag))
-            if self.title_tag:
-                title = "{{b}}{0}{{/b}}".format(quote_text(self.title_tag))
-            if self.album_tag:
-                album = quote_text(self.album_tag)
-            if self.date_tag:
-                date = quote_text(self.date_tag)
-            if self.genre_tag:
-                genre = "{{i}}{0}{{/i}}".format(quote_text(self.genre_tag))
-            
-            if only_title:
-                if title:
-                    return (self.__viewer_object.disp_getter.Text(title),)
-                return None
-                
-            result = []
-            artist_title_text_data = " - ".join(filter(bool, (artist, title)))
-            for show_text, source_text in zip(
-                (artist_title_text_data, album, date, genre),
-                (
-                    ' '.join(filter(bool, (self.artist_tag, self.title_tag))),
-                    self.album_tag,
-                    self.date_tag,
-                    self.genre_tag
-                )
-                
-            ):
-                if source_text:
-                    _tb = self.__viewer_object.disp_getter.TextButton(
-                        show_text,
-                        clicked=Function(
-                            self.__viewer_object.extra._copy_to_clipboard,
-                            source_text
-                        ),
-                        alternate=Function(
-                            self.__viewer_object.extra._search_on_web,
-                            source_text
-                        )
-                    )
-                    result.append(_tb)
-            if not result:
-                return None
-            return tuple(result)
-
-
     class MetaDataViewer(renpy.Displayable, NoRollback):
-    
+
         __author__ = "Vladya"
-        
-        
+
+
         MAX_SIZE = (
             (float(config.screen_width) * PHI_CONST),
             (float(config.screen_height) * PHI_CONST)
         )
 
         def __init__(self):
-            
+
             super(MetaDataViewer, self).__init__()
-            
+
             self.__preferences = Preferences(pref_id=self.__class__.__name__)
-            
+
             self.__disp_getter = DispGetter(preferences=self.preferences)
-            
+
             self.__channel = get_channel(self.preferences.channel_name)
             self.__channel_lock = threading.Lock()
-            
+
             self.__metadata_objects = {}
             self._metadata_lock = threading.Lock()
-            
-            self.__size = None
-            self.__is_hovered = None
-            
-            self.__general_displayable = None
+
+            self.__is_hovered = None  # Наведение на окно.
+            self.__is_true_hovered = None  # Наведение на непрозрачный пиксель.
+
+            self.__general_displayable = None  # Основной DisplayableWrapper.
+            self.__drag_object = None
             self.__extra = ExtraFunctional(viewer_object=self)
-            
+
             self.__scanner_thread = MusicScanner(viewer_object=self)
             self.__scanner_thread.start()
-            
-            
+
+
         def __call__(self, *args, **kwargs):
             """
             Для вызова в качестве скрина.
             """
-            xanchor, yanchor = self.preferences._alignment_to_tuple(
-                self.preferences.alignment
-            )
-            xpos, ypos = map(lambda a: ((a * .98) + .01), (xanchor, yanchor))
-            ui.add(
-                Transform(self, anchor=(xanchor, yanchor), pos=(xpos, ypos))
-            )
-            
+            if not self.__drag_object:
+                self.__drag_object = NonRevertableDrag(
+                    self,
+                    draggable=True,
+                    droppable=False,
+                    style="_wp_drag"
+                )
+            ui.add(self.__drag_object)
+
         @property
         def preferences(self):
             """
             Объект 'Preferences'. Различные настройки.
             """
             return self.__preferences
-            
+
         @property
         def disp_getter(self):
             """
             Объект 'DispGetter'. Для составления Displayable.
             """
             return self.__disp_getter
-            
+
         @property
         def extra(self):
             """
             Объект доп. функционала.
             """
             return self.__extra
-            
-            
+
+
         @property
         def channel(self):
             with self.__channel_lock:
                 if self.__channel.name != self.preferences.channel_name:
                     self.__channel = get_channel(self.preferences.channel_name)
                 return self.__channel
-                
+
         @property
         def scanner_thread(self):
             return self.__scanner_thread
@@ -362,7 +106,7 @@ init 6 python in _whatPlaying:
         def _get_metadata_object(self, filename=None, not_create=False):
             """
             Возвращает объект RenPyAudioFile либо None.
-            
+
             :not_create:
                 Возвращает объект, только если он уже есть в базе данных.
                 Для доступа к файлам во время сканирования.
@@ -405,11 +149,11 @@ init 6 python in _whatPlaying:
         def _get_playing(self):
             """
             Обёртка над ренпаевским 'get_playing'.
-            
+
             Возвращает имя файла воспроизводимой композиции,
             либо объект AudioData,
             либо None.
-            
+
             Напоминалка:
                 AudioData наследуется от unicode.
                 Проверка на тип basestring даст True.
@@ -435,7 +179,7 @@ init 6 python in _whatPlaying:
                 return filename
 
         def _get_position(self):
-            
+
             """
             Возвращает значение от .0 до 1. включительно,
             выражающее отношение воспроизведённой части трека к длительности;
@@ -452,24 +196,28 @@ init 6 python in _whatPlaying:
             return min((position_on_ms / (duration_on_sec * 1e3)), 1.)
 
         def event(self, ev, x, y, st):
-        
-            if self.__size:
-                rend_w, rend_h = self.__size
-                self.__is_hovered = ((0 <= x <= rend_w) and (0 <= y <= rend_h))
+            disp = self.__general_displayable
+            if disp:
+                self.__is_hovered = (
+                    ((0 <= x <= disp.width) and (0 <= y <= disp.height))
+                )
                 if self.__is_hovered:
-                    if self.__general_displayable:
-                        self.__general_displayable.event(ev, x, y, st)
+                    self.__is_true_hovered = (
+                        disp.surface.is_pixel_opaque(x, y)
+                    )
+                    disp.displayable.event(ev, x, y, st)
                     raise renpy.IgnoreEvent()
                 else:
+                    self.__is_true_hovered = False
                     self.__extra._clean_status_messages()
 
         def _get_scan_block(self, is_minimized, *render_args):
             """
             Составляет блок статуса сканирования.
-            
+
             (Возвращает DisplayableWrapper объект.)
             """
-            
+
             text_view = self.scanner_thread._get_text_view(
                 short_view=is_minimized
             )
@@ -481,7 +229,7 @@ init 6 python in _whatPlaying:
             )
             if is_minimized:
                 return text_displayable
-            
+
             # Отрисовываем бар статуса сканирования.
             status_bar = DisplayableWrapper(
                 self.disp_getter.HBar(
@@ -495,7 +243,7 @@ init 6 python in _whatPlaying:
                 ),
                 *render_args
             )
-            
+
             # Пририсовываем бар к текстовому блоку.
             base_block = DisplayableWrapper(
                 self.disp_getter.VBox(text_displayable, status_bar),
@@ -508,10 +256,10 @@ init 6 python in _whatPlaying:
             """
             Составляет основной блок данных:
                 Название трека, статус бар, обложку.
-            
+
             (Возвращает DisplayableWrapper объект.)
             """
-            
+
             song_info_tuple = metadata._get_info_displayables(
                 only_title=is_minimized
             )
@@ -529,7 +277,7 @@ init 6 python in _whatPlaying:
                         self.disp_getter.VBox(*song_info_tuple, spacing=0),
                         *render_args
                     )
-                    
+
             else:
                 # Данные получить не удалось.
                 text_block = DisplayableWrapper(
@@ -566,7 +314,7 @@ init 6 python in _whatPlaying:
                 ),
                 *render_args
             )
-        
+
             position = self._get_position()
             # Если известна позиция трека - отрисовываем статус-бар.
             if isinstance(position, float):
@@ -587,6 +335,54 @@ init 6 python in _whatPlaying:
 
             return base_block
 
+        def _drag_periodic(self, width, height):
+            """
+            Контроль положения Drag объекта. Вызывать из метода рендера.
+            """
+            if not self.__drag_object:
+                return
+
+            width, height = map(float, (width, height))
+            x, y = self.__drag_object.x, self.__drag_object.y
+            w = h = None
+            if self.__general_displayable:
+                w, h = self.__general_displayable.size
+
+            grabbed = (renpy.display.focus.get_grab() is self.__drag_object)
+            if grabbed and all(map(lambda _x: (_x is not None), (x, y, w, h))):
+                # Юзер перетаскивает окно.
+                x, y = map(float, (x, y))
+                max_w = width - w
+                max_h = height - h
+                xalign, yalign = (x / max_w), (y / max_h)
+
+                # Округляем align до значений, кратных 0.5.
+                xalign, yalign = map(
+                    lambda x: (round((max(min(x, 1.), .0) * 2.)) / 2.),
+                    (xalign, yalign)
+                )
+                try:
+                    self.preferences.alignment = (xalign, yalign)
+                except Exception as ex:
+                    if DEBUG:
+                        raise ex
+                    self.preferences.alignment = "tr"
+
+            if (not grabbed) and all(map(lambda _x: (_x is not None), (w, h))):
+                # Окно отпущено. Выравниваем.
+                xanchor, yanchor = self.preferences._alignment_to_tuple(
+                    self.preferences.alignment
+                )
+                xpos, ypos = map(
+                    lambda a: ((a * .98) + .01),
+                    (xanchor, yanchor)
+                )
+                xpos = int(((width * xpos) - (w * xanchor)))
+                ypos = int(((height * ypos) - (h * yanchor)))
+                if (x, y) != (xpos, ypos):
+                    self.__drag_object.snap(xpos, ypos, 0)
+
+
         def render(self, width, height, st, at):
 
             render_args = (width, height, st, at)
@@ -597,7 +393,7 @@ init 6 python in _whatPlaying:
                 if DEBUG and self.scanner_thread.exception:
                     # Во время сканирования произошла ошибка.
                     raise self.scanner_thread.exception
-                
+
                 if config.skipping:
                     # Перемотка.
                     general_block = DisplayableWrapper(
@@ -620,17 +416,17 @@ init 6 python in _whatPlaying:
                             self.disp_getter.Text(__("Тишина в эфире.")),
                             *render_args
                         )
-                    
+
             else:
                 # Идёт сканирование. Выводим информацию.
                 general_block = self._get_scan_block(
                     is_minimized,
                     *render_args
                 )
-            
+
             if self.__is_hovered:
                 # Если есть наведение - рисуем экстра блок и альфа-бар.
-                
+
                 # Рисуем экстра-блок.
                 extra_block = self.__extra.get_extra_block(*render_args)
                 general_block = DisplayableWrapper(
@@ -657,8 +453,8 @@ init 6 python in _whatPlaying:
                     self.disp_getter.HBox(general_block, alpha_bar),
                     *render_args
                 )
-                
-                
+
+
             # Завершающая часть. Подгоняем готовую картинку.
             if not self.__is_hovered:
                 # Если наведения нет - меняем состояние альфа-канала.
@@ -686,18 +482,18 @@ init 6 python in _whatPlaying:
                 )
 
             # Финальный рендер.
-            self.__general_displayable = general_block.displayable
-            render_w, render_h = self.__size = tuple(
-                map(int, general_block.size)
-            )
+            self.__general_displayable = general_block
+            render_w, render_h = tuple(map(int, general_block.size))
             render_object = renpy.Render(render_w, render_h)
             render_object.blit(general_block.surface, (0, 0))
 
-            if self.__is_hovered:
-                render_object.add_focus(self, x=0, y=0, w=render_w, h=render_h)
+            if self.__is_true_hovered:
+                render_object.add_focus(self, w=render_w, h=render_h)
 
+            self._drag_periodic(width, height)
             renpy.redraw(self, .0)
             return render_object
+
 
     renpy.display.screen.define_screen(
         MetaDataViewer.__name__,
