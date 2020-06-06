@@ -236,10 +236,7 @@ init 10 python in _whatPlaying:
                     value=_ScanThreadStatusValue(
                         scanner_thread_object=self.scanner_thread
                     ),
-                    width=int(text_displayable.width),
-                    height=int(
-                        (float(text_displayable.style.size) * PHI_CONST)
-                    )
+                    width=int(text_displayable.width)
                 ),
                 *render_args
             )
@@ -380,8 +377,7 @@ init 10 python in _whatPlaying:
                 xpos = int(((width * xpos) - (w * xanchor)))
                 ypos = int(((height * ypos) - (h * yanchor)))
                 if (x, y) != (xpos, ypos):
-                    self.__drag_object.snap(xpos, ypos, 0)
-
+                    self.__drag_object.snap(xpos, ypos)
 
         def render(self, width, height, st, at):
 

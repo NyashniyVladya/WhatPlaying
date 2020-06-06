@@ -161,4 +161,14 @@ init 4 python in _whatPlaying:
             return render_object
 
     class NonRevertableDrag(Drag, NoRollback):
-        pass
+
+        def snap(self, x, y, delay=0):
+
+            self.target_x = x
+            self.target_y = y
+
+            self.target_at = .0
+            self.x = x
+            self.y = y
+
+            renpy.redraw(self, 0)
