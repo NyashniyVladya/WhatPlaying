@@ -47,6 +47,8 @@ label start:
     while True:
         menu:
             "Собрать билду":
+                if _whatPlaying.DEBUG:
+                    "Внимание! Билда собирается с включённым режимом дебага."
                 $ _what_playing_build._RPA.create_build(
                     build_name="WhatPlaying"
                 )

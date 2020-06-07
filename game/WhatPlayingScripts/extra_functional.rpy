@@ -158,18 +158,61 @@ init 4 python in _whatPlaying:
                 ),
                 *render_args
             )
+            disp_to_box = [button]
 
-            if base_block:
-                base_block = DisplayableWrapper(
+            # Режим перетаскивания.
+            text_view = __("{0} режим перетаскивания.")
+            if self.__viewer_object.preferences.drag_mode:
+                text_view = text_view.format(__("Отключить"))
+            else:
+                text_view = text_view.format(__("Включить"))
+            button = DisplayableWrapper(
+                self.__viewer_object.disp_getter.TextButton(
+                    text_view,
+                    SetField(
+                        self.__viewer_object.preferences,
+                        "drag_mode",
+                        (not self.__viewer_object.preferences.drag_mode)
+                    )
+                ),
+                *render_args
+            )
+            if self.__viewer_object.preferences.drag_mode:
+                # Примечание по Drag&Drop.
+                note = __(
+                    """
+                    Рекомендуется отключить режим перетаскивания
+                    после установки оптимального положения, т.к.
+                    качество рендера окна в режиме перетаскивания
+                    значительно ниже.
+                    """
+                )
+                note = DisplayableWrapper(
+                    self.__viewer_object.disp_getter.Text(
+                        unpack_multiline_string(note),
+                        color="#f00",
+                        layout="subtitle",
+                        xmaximum=int(self.__viewer_object.MAX_SIZE[0])
+                    ),
+                    *render_args
+                )
+                button = DisplayableWrapper(
                     self.__viewer_object.disp_getter.VBox(
-                        base_block,
                         button,
+                        note,
                         spacing=0
                     ),
                     *render_args
                 )
-            else:
-                base_block = button
+            disp_to_box.append(button)
+
+            if base_block:
+                disp_to_box.insert(0, base_block)
+
+            base_block = DisplayableWrapper(
+                self.__viewer_object.disp_getter.VBox(*disp_to_box, spacing=0),
+                *render_args
+            )
 
             # Описание альфа бара.
             text_view = __(

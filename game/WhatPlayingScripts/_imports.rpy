@@ -63,7 +63,6 @@ init 1 python in _whatPlaying:
     LOGGER.setLevel((logging.DEBUG if DEBUG else logging.CRITICAL))
     _logger = LOGGER.getChild("RenPyLogger")
     languages_codes = {
-        "russian": "RU",
         "english": "US",
         "spanish": "ES",
         "italian": "IT",

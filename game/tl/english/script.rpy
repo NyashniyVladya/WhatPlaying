@@ -40,3 +40,11 @@ translate english strings:
     old "Переключить язык"
     new "Change the language"
 
+# TODO: Translation updated at 2020-06-07 02:50
+
+# game/script.rpy:51
+translate english start_a41b42e7:
+
+    # "Внимание! Билда собирается с включённым режимом дебага."
+    "Attention! The build is compiled with debug mode enabled."
+

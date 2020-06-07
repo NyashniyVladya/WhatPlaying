@@ -18,7 +18,8 @@ init 4 python in _whatPlaying:
             "alpha": 1.,
             "alignment": "tr",
             "search_engine": "YouTube",
-            "minimize": True
+            "minimize": True,
+            "drag_mode": False
         }
 
         alignment_pattern = re.compile(
@@ -44,6 +45,25 @@ init 4 python in _whatPlaying:
             Преобразует строку в имя persistent атрибута.
             """
             return "what_playing_pref_{0}_{1}".format(self.__pref_id, name)
+
+        @property
+        def drag_mode(self):
+            """
+            Является ли основное окно перетаскиваемым.
+            """
+            name = self._get_persistent_name("drag_mode")
+            with self.__locks["drag_mode"]:
+                return getattr(persistent, name)
+
+        @drag_mode.setter
+        def drag_mode(self, new_drag_mode):
+            new_drag_mode = bool(new_drag_mode)
+            name = self._get_persistent_name("drag_mode")
+            with self.__locks["drag_mode"]:
+                if new_drag_mode != getattr(persistent, name):
+                    setattr(persistent, name, new_drag_mode)
+                    DisplayableWrapper._clear_cache()
+                    renpy.restart_interaction()  # Реинициализация скрина.
 
         @property
         def minimize(self):

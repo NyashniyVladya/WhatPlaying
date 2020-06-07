@@ -58,3 +58,23 @@ translate english strings:
     old "Копирование успешно."
     new "Data copied successfully."
 
+# TODO: Translation updated at 2020-06-08 01:00
+
+translate english strings:
+
+    # game/WhatPlayingScripts/extra_functional.rpy:164
+    old "{0} режим перетаскивания."
+    new "Drag and Drop mode is {0}."
+
+    # game/WhatPlayingScripts/extra_functional.rpy:166
+    old "Отключить"
+    new "enabled"
+
+    # game/WhatPlayingScripts/extra_functional.rpy:168
+    old "Включить"
+    new "disabled"
+
+    # game/WhatPlayingScripts/extra_functional.rpy:182
+    old "\n                    Рекомендуется отключить режим перетаскивания\n                    после установки оптимального положения, т.к.\n                    качество рендера окна в режиме перетаскивания\n                    значительно ниже.\n                    "
+    new "It is recommended to disable the drag and drop mode after setting the optimal position, as the quality of window rendering in drag and drop mode is much worse."
+

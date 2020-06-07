@@ -48,11 +48,11 @@ init 10 python in _whatPlaying:
             self.__scanner_thread = MusicScanner(viewer_object=self)
             self.__scanner_thread.start()
 
-
         def __call__(self, *args, **kwargs):
             """
             Для вызова в качестве скрина.
             """
+
             if not self.__drag_object:
                 self.__drag_object = NonRevertableDrag(
                     self,
@@ -60,7 +60,15 @@ init 10 python in _whatPlaying:
                     droppable=False,
                     style="_wp_drag"
                 )
-            ui.add(self.__drag_object)
+
+            if self.preferences.drag_mode:
+                ui.add(self.__drag_object)
+            else:
+                anchor = self.preferences._alignment_to_tuple(
+                    self.preferences.alignment
+                )
+                pos = tuple(map(lambda a: ((a * .998) + .001), anchor))
+                ui.add(self, anchor=anchor, pos=pos)
 
         @property
         def preferences(self):
@@ -336,7 +344,7 @@ init 10 python in _whatPlaying:
             """
             Контроль положения Drag объекта. Вызывать из метода рендера.
             """
-            if not self.__drag_object:
+            if not (self.__drag_object and self.preferences.drag_mode):
                 return
 
             width, height = map(float, (width, height))

@@ -8,7 +8,7 @@ init 2:
         outlines [(_whatPlaying.recalculate_to_screen_size(2), "#000", 0, 0)]
 
     style _wp_button_text is _wp_text:
-        hover_color "#888"
+        hover_color Color(style._wp_text.color).shade(_whatPlaying.PHI_CONST)
 
     style _wp_vbar is default:
         bar_vertical True
