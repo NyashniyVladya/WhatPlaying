@@ -64,17 +64,17 @@ translate english strings:
 
     # game/WhatPlayingScripts/extra_functional.rpy:164
     old "{0} режим перетаскивания."
-    new "Drag and Drop mode is {0}."
+    new "{0} the drag mode."
 
     # game/WhatPlayingScripts/extra_functional.rpy:166
     old "Отключить"
-    new "enabled"
+    new "Turn off"
 
     # game/WhatPlayingScripts/extra_functional.rpy:168
     old "Включить"
-    new "disabled"
+    new "Turn on"
 
     # game/WhatPlayingScripts/extra_functional.rpy:182
     old "\n                    Рекомендуется отключить режим перетаскивания\n                    после установки оптимального положения, т.к.\n                    качество рендера окна в режиме перетаскивания\n                    значительно ниже.\n                    "
-    new "It is recommended to disable the drag and drop mode after setting the optimal position, as the quality of window rendering in drag and drop mode is much worse."
+    new "Recommended to disable the drag and drop mode after setting the optimal position, as the quality of window rendering in drag and drop mode is much worse."
 

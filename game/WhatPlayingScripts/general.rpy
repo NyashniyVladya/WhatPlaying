@@ -39,7 +39,6 @@ init 10 python in _whatPlaying:
             self._metadata_lock = threading.Lock()
 
             self.__is_hovered = None  # Наведение на окно.
-            self.__is_true_hovered = None  # Наведение на непрозрачный пиксель.
 
             self.__general_displayable = None  # Основной DisplayableWrapper.
             self.__drag_object = None
@@ -210,13 +209,9 @@ init 10 python in _whatPlaying:
                     ((0 <= x <= disp.width) and (0 <= y <= disp.height))
                 )
                 if self.__is_hovered:
-                    self.__is_true_hovered = (
-                        disp.surface.is_pixel_opaque(x, y)
-                    )
                     disp.displayable.event(ev, x, y, st)
                     raise renpy.IgnoreEvent()
                 else:
-                    self.__is_true_hovered = False
                     self.__extra._clean_status_messages()
 
         def _get_scan_block(self, is_minimized, *render_args):
@@ -433,10 +428,19 @@ init 10 python in _whatPlaying:
 
                 # Рисуем экстра-блок.
                 extra_block = self.__extra.get_extra_block(*render_args)
+                extra_block = DisplayableWrapper(
+                    self.disp_getter.Window(
+                        extra_block.displayable,
+                        xpadding=7,
+                        ypadding=7
+                    ),
+                    *render_args
+                )
                 general_block = DisplayableWrapper(
                     self.disp_getter.VBox(general_block, extra_block),
                     *render_args
                 )
+
 
                 # Рисуем альфа-бар.
                 alpha_bar = DisplayableWrapper(
@@ -457,6 +461,8 @@ init 10 python in _whatPlaying:
                     self.disp_getter.HBox(general_block, alpha_bar),
                     *render_args
                 )
+
+
 
 
             # Завершающая часть. Подгоняем готовую картинку.
@@ -490,9 +496,6 @@ init 10 python in _whatPlaying:
             render_w, render_h = tuple(map(int, general_block.size))
             render_object = renpy.Render(render_w, render_h)
             render_object.blit(general_block.surface, (0, 0))
-
-            if self.__is_true_hovered:
-                render_object.add_focus(self, w=render_w, h=render_h)
 
             self._drag_periodic(width, height)
             renpy.redraw(self, .0)

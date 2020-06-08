@@ -1,6 +1,17 @@
 
 init 2:
 
+    python:
+        def _matrix_on_frame(matrix):
+            """
+            Применяет переданную матрицу на пикчу фрейма.
+            """
+            _frame = im.Image("whatPlayingImages/frame.png")
+            return Frame(im.MatrixColor(_frame, matrix), 6, 6, tile=True)
+
+        _empty_color = Color("#2a456e")
+        _full_color = _empty_color.tint(_whatPlaying.PHI_CONST)
+
     style _wp_text is default:
         size _whatPlaying.recalculate_to_screen_size(22)
         layout "nobreak"
@@ -12,8 +23,8 @@ init 2:
 
     style _wp_vbar is default:
         bar_vertical True
-        top_bar Frame("whatPlayingImages/bar_empty.png", 6, 6, tile=True)
-        bottom_bar Frame("whatPlayingImages/bar_full.png", 6, 6, tile=True)
+        top_bar _matrix_on_frame(im.matrix.colorize("#000", _empty_color))
+        bottom_bar _matrix_on_frame(im.matrix.colorize("#000", _full_color))
         left_gutter 5
         right_gutter 5
         top_gutter 5
@@ -21,8 +32,8 @@ init 2:
 
     style _wp_hbar is default:
         bar_vertical False
-        right_bar Frame("whatPlayingImages/bar_empty.png", 6, 6, tile=True)
-        left_bar Frame("whatPlayingImages/bar_full.png", 6, 6, tile=True)
+        right_bar _matrix_on_frame(im.matrix.colorize("#000", _empty_color))
+        left_bar _matrix_on_frame(im.matrix.colorize("#000", _full_color))
         left_gutter 5
         right_gutter 5
         top_gutter 5
@@ -43,7 +54,14 @@ init 2:
     style _wp_transform is default
 
     style _wp_window is default:
-        background Frame("whatPlayingImages/frame.png", 6, 6, tile=True)
+        background _matrix_on_frame(
+            ( # Белый в тёмно-прозрачный.
+                 0.1,  0.0,  0.0, 0.0, 0.0,
+                 0.0,  0.1,  0.0, 0.0, 0.0,
+                 0.0,  0.0,  0.1, 0.0, 0.0,
+                -0.2, -0.2, -0.2, 1.0, 0.0
+            )
+        )
         xpadding 5
         ypadding 5
 
