@@ -505,6 +505,6 @@ init 10 python in _whatPlaying:
     renpy.display.screen.define_screen(
         MetaDataViewer.__name__,
         MetaDataViewer(),
-        layer="master"
+        layer="overlay"
     )
     config.overlay_screens.append(MetaDataViewer.__name__)

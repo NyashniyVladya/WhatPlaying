@@ -59,7 +59,7 @@ init 1 python in _whatPlaying:
             """
             pass
 
-    DEBUG = True  # Флаг для отладки.
+    DEBUG = False  # Флаг для отладки.
     LOGGER.setLevel((logging.DEBUG if DEBUG else logging.CRITICAL))
     _logger = LOGGER.getChild("RenPyLogger")
     languages_codes = {
