@@ -131,7 +131,7 @@ class ITunesWebParser(object):
     URL = urllib2.urlparse.urlparse("https://itunes.apple.com/search")
     CACHE_FOLDER = path.join(DATABASE_FOLDER, u"WebCache")
     RPM = 20.  # Request per minute
-    LAST_REQUEST = .0
+    LAST_REQUEST = None
     ITUNES_COUNTRY = None
 
     WEBPAGE_FILE_LOCK = threading.Lock()
@@ -162,7 +162,7 @@ class ITunesWebParser(object):
             try:
                 variants = self._get_results_about_track()
             except InternetConnectionError as ex:
-                self.LOGGER.info("No internet connection.")
+                self.LOGGER.info("No internet connection or bad request.")
                 if ex.message:
                     self.LOGGER.debug(ex.message)
                 return None
@@ -237,15 +237,23 @@ class ITunesWebParser(object):
 
     @classmethod
     def _urllib_urlopen(cls, *args, **kwargs):
+
         with cls.WEB_LOCK:
-            while (time.time() - cls.LAST_REQUEST) < (60. / cls.RPM):
-                time.sleep(.01)
+
+            if cls.LAST_REQUEST is not None:
+                while (time.time() - cls.LAST_REQUEST) < (60. / cls.RPM):
+                    time.sleep(.01)
             try:
-                return urllib2.urlopen(*args, **kwargs)
+                request = urllib2.urlopen(*args, **kwargs)
             except Exception as ex:
-                raise InternetConnectionError(ex.message)
-            finally:
+                if isinstance(ex, urllib2.HTTPError):
+                    # Despite the error, the request was sent. Time to update.
+                    cls.LAST_REQUEST = time.time()
+                message = getattr(ex, "reason", ex.message)
+                raise InternetConnectionError(message)
+            else:
                 cls.LAST_REQUEST = time.time()
+                return request
 
     def _get_results_about_track(self):
 
