@@ -45,7 +45,9 @@ init 10 python in _whatPlaying:
             self.__extra = ExtraFunctional(viewer_object=self)
 
             self.__scanner_thread = MusicScanner(viewer_object=self)
-            self.__scanner_thread.start()
+            renpy.game.post_init.extend(
+                (renpy.loader.index_archives, self.__scanner_thread.start)
+            )
 
         def __call__(self, *args, **kwargs):
             """

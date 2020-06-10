@@ -249,13 +249,18 @@ init 4 python in _whatPlaying:
             try:
                 targets = frozenset(self._get_all_tracks())
                 targets_number = float(len(targets))
+                ex = None
                 for i, (basename, renpy_fn) in enumerate(targets):
                     self.__scan_status = float(i) / targets_number
                     self.__scan_now = basename
-                    self.__viewer_object._get_metadata_object(
-                        filename=renpy_fn
-                    )
-
+                    try:
+                        self.__viewer_object._get_metadata_object(
+                            filename=renpy_fn
+                        )
+                    except Exception as ex:
+                        continue
+                if ex:
+                    raise ex
             except Exception as ex:
                 self.__exception = ex
                 raise ex
