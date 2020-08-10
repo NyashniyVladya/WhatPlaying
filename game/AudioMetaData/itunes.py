@@ -165,6 +165,7 @@ class ITunesWebParser(object):
                 self.LOGGER.info("No internet connection or bad request.")
                 if ex.message:
                     self.LOGGER.debug(ex.message)
+                self.__web_tag = "noOptionFound"
                 return None
             except JSONError:
                 self.LOGGER.error("JSON decode error.")
