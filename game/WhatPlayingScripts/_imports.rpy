@@ -134,3 +134,14 @@ init 1 python in _whatPlaying:
                 url,
                 ex.message
             )
+
+    def is_showable(image_object):
+        """
+        Проверяет возможность показа 'ImageBase' изображения.
+        """
+        if not isinstance(image_object, im.ImageBase):
+            raise TypeError(__("Переданный тип не 'im.ImageBase'."))
+        try:
+            return bool(image_object.load())
+        except Exception:
+            return False

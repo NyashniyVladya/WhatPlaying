@@ -87,6 +87,7 @@ class WebTag(AudioTag):
             try:
                 image = ITunesWebParser._openurl(url)
             except InternetConnectionError:
+                self.__coveralbum = "noOptionFound"
                 return None
             except Exception as ex:
                 self.LOGGER.error("Unrecognized error.\n%s", ex.message)

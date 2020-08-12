@@ -10,3 +10,11 @@ translate english strings:
     old "Передан не текст."
     new "Wrong type. Text expected."
 
+# TODO: Translation updated at 2020-08-13 00:12
+
+translate english strings:
+
+    # game/WhatPlayingScripts/_imports.rpy:143
+    old "Переданный тип не 'im.ImageBase'."
+    new "Wrong type. 'im.ImageBase' expected."
+

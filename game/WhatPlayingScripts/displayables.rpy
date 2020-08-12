@@ -14,10 +14,18 @@ init 4 python in _whatPlaying:
 
             super(_AlbumCover, self).__init__()
 
+            fn = picture_bytedata = None
             if metadata_object.coveralbum_tag:
                 fn, picture_bytedata = metadata_object.coveralbum_tag
                 fn = "{0} {1}".format(metadata_object.__unicode__(), fn)
-            else:
+                if not is_showable(
+                    im.Data(data=picture_bytedata, filename=fn)
+                ):
+                    # Если по каким-то причинам картинка не прогружается
+                    # (Неподдерживаемый формат, огромный размер и т.п.)
+                    fn = picture_bytedata = None
+
+            if not (fn and picture_bytedata):
                 with renpy.file("albumCoverPlaceholders.zip") as _raw_zipfile:
                     with zipfile.ZipFile(_raw_zipfile, 'r') as _archive:
                         _placeholder = random.choice(_archive.infolist())
